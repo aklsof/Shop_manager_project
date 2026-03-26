@@ -1,469 +1,46 @@
--- ============================================================
--- Hybrid Store Management System - Database Schema v3.0
--- Tables + Views + Triggers
--- Aligned with SRS v2.0 (Sofiane Akli, Dec 2025)
--- ============================================================
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Mar 26, 2026 at 05:00 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
-DROP DATABASE IF EXISTS hybrid_store;
-CREATE DATABASE IF NOT EXISTS hybrid_store
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;     -- Required for REQ-23 multilingual support
-USE hybrid_store;
-
-
--- ============================================================
--- TABLES
--- ============================================================
-
--- 1. Users Table (Staff & Admins)
---    REQ-32: password OR PIN authentication
---    REQ-37: role-based access; accounts can be deactivated
-CREATE TABLE users (
-    user_id        INT AUTO_INCREMENT PRIMARY KEY,
-    username       VARCHAR(50)  NOT NULL UNIQUE,
-    password_hash  VARCHAR(255) NOT NULL,
-    pin_hash       VARCHAR(255) NULL,                          -- REQ-32: optional PIN login
-    role           ENUM('Store Associate', 'Administrator') NOT NULL,
-    preferred_lang VARCHAR(10)  DEFAULT 'en',                  -- REQ-23/24: per-user language
-    is_active      BOOLEAN      DEFAULT TRUE,                  -- REQ-37: disable without deleting
-    created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
-);
-
--- 2. Clients Table (Web Portal Customers)
---    REQ-6: registration with password complexity enforced at app layer
-CREATE TABLE clients (
-    client_id      INT AUTO_INCREMENT PRIMARY KEY,
-    username       VARCHAR(50)  NOT NULL UNIQUE,
-    email          VARCHAR(100) NOT NULL UNIQUE,
-    password_hash  VARCHAR(255) NOT NULL,
-    preferred_lang VARCHAR(10)  DEFAULT 'en',                  -- REQ-23/24
-    is_active      BOOLEAN      DEFAULT TRUE,
-    created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
-);
-
--- 3. Tax Categories Table
---    REQ-36: admin-defined categories; default "Standard" at 19%
-CREATE TABLE tax_categories (
-    tax_category_id INT AUTO_INCREMENT PRIMARY KEY,
-    name            VARCHAR(50)    NOT NULL UNIQUE,
-    rate            DECIMAL(5, 2)  NOT NULL CHECK (rate >= 0 AND rate <= 100),
-    created_at      TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO tax_categories (name, rate) VALUES ('Standard', 19.00);  -- REQ-36
-
--- 4. Products Table
---    REQ-10: name, category, default price, location, tax, min threshold
-CREATE TABLE products (
-    product_id            INT AUTO_INCREMENT PRIMARY KEY,
-    name                  VARCHAR(100)   NOT NULL,
-    category              VARCHAR(50)    NOT NULL,
-    default_selling_price DECIMAL(10, 2) NOT NULL CHECK (default_selling_price >= 0),
-    store_location        VARCHAR(100),
-    tax_category_id       INT            NOT NULL,
-    min_stock_threshold   INT            DEFAULT 0 CHECK (min_stock_threshold >= 0),  -- REQ-39
-    created_at            TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (tax_category_id) REFERENCES tax_categories(tax_category_id)
-);
-
--- 5. Inventory Lots Table
---    REQ-4:  FIFO — consume earliest date_received lot first
---    REQ-11: stock receipt creates a new lot
---    REQ-12: unique lot_id stamped with current timestamp
-CREATE TABLE inventory_lots (
-    lot_id        INT AUTO_INCREMENT PRIMARY KEY,
-    product_id    INT            NOT NULL,
-    quantity      INT            NOT NULL CHECK (quantity >= 0),
-    buying_price  DECIMAL(10, 2) NOT NULL CHECK (buying_price >= 0),
-    date_received TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
-
--- 6. Inventory Adjustments Table
---    REQ-33: shrinkage / damage corrections by authorized users
-CREATE TABLE inventory_adjustments (
-    adjustment_id     INT AUTO_INCREMENT PRIMARY KEY,
-    lot_id            INT  NOT NULL,
-    user_id           INT  NOT NULL,
-    quantity_adjusted INT  NOT NULL CHECK (quantity_adjusted != 0),
-    reason            VARCHAR(255),
-    adjustment_date   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (lot_id)  REFERENCES inventory_lots(lot_id),
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
-
--- 7. Price Rules Table
---    REQ-3:  dynamic price from active rules at query time
---    REQ-16: rule types: Deal, Rollback, Clearance, Holiday
---    SRS 5.3: prices switch exactly at 00:00:00 on start_date
-CREATE TABLE price_rules (
-    rule_id            INT AUTO_INCREMENT PRIMARY KEY,
-    product_id         INT            NOT NULL,
-    rule_type          ENUM('Deal', 'Rollback', 'Clearance', 'Holiday') NOT NULL,
-    promotional_price  DECIMAL(10, 2) NOT NULL CHECK (promotional_price >= 0),
-    start_date         DATETIME       NOT NULL,
-    end_date           DATETIME       NOT NULL,
-    is_active          BOOLEAN        DEFAULT TRUE,
-    created_at         TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(product_id),
-    CHECK (end_date > start_date),
-    UNIQUE KEY uq_active_rule (product_id, rule_type, start_date)
-);
-
--- 8. Transactions Table (POS Sales & Refunds)
---    REQ-32: user_id recorded on every transaction
---    REQ-25: is_refund flag for Refund Mode
---    REQ-28: receipt generated using stored language
-CREATE TABLE transactions (
-    transaction_id    INT AUTO_INCREMENT PRIMARY KEY,
-    user_id           INT            NOT NULL,
-    total_amount      DECIMAL(10, 2) NOT NULL,
-    is_refund         BOOLEAN        DEFAULT FALSE,
-    receipt_language  VARCHAR(10)    DEFAULT 'en',
-    transaction_date  TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
-
--- 9. Transaction Items Table
---    REQ-4:  lot_id records which FIFO lot was consumed
---    REQ-35: tax_applied stored per line item for accurate reporting
---    REQ-26: refund inserts a new lot (handled at app layer)
-CREATE TABLE transaction_items (
-    transaction_item_id INT AUTO_INCREMENT PRIMARY KEY,
-    transaction_id      INT            NOT NULL,
-    product_id          INT            NOT NULL,
-    lot_id              INT            NOT NULL,
-    quantity            INT            NOT NULL CHECK (quantity != 0),
-    price_applied       DECIMAL(10, 2) NOT NULL CHECK (price_applied >= 0),
-    tax_applied         DECIMAL(10, 2) NOT NULL CHECK (tax_applied >= 0),
-    FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id),
-    FOREIGN KEY (product_id)     REFERENCES products(product_id),
-    FOREIGN KEY (lot_id)         REFERENCES inventory_lots(lot_id)
-);
-
--- 10. Web Orders Table
---     REQ-34: POS polls every 30 s; status workflow tracked
-CREATE TABLE web_orders (
-    order_id     INT AUTO_INCREMENT PRIMARY KEY,
-    client_id    INT  NOT NULL,
-    handled_by   INT  NULL,
-    status       ENUM('Pending', 'Ready for Pickup', 'Completed') DEFAULT 'Pending',
-    order_date   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (client_id)  REFERENCES clients(client_id),
-    FOREIGN KEY (handled_by) REFERENCES users(user_id)
-);
-
--- 11. Web Order Items Table
---     REQ-34: order details must be viewable on POS dashboard
-CREATE TABLE web_order_items (
-    order_item_id  INT            AUTO_INCREMENT PRIMARY KEY,
-    order_id       INT            NOT NULL,
-    product_id     INT            NOT NULL,
-    quantity       INT            NOT NULL CHECK (quantity > 0),
-    price_at_order DECIMAL(10, 2) NOT NULL,
-    FOREIGN KEY (order_id)   REFERENCES web_orders(order_id),
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
 
--- ============================================================
--- VIEWS
--- ============================================================
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
--- ------------------------------------------------------------
--- V1. vw_product_stock
---     Aggregates total available stock per product across all
---     lots (net of adjustments). Used by REQ-8 (customer portal
---     stock display) and REQ-39 (low stock alert widget).
--- ------------------------------------------------------------
-CREATE OR REPLACE VIEW vw_product_stock AS
-SELECT
-    p.product_id,
-    p.name                                       AS product_name,
-    p.category,
-    p.store_location,
-    p.min_stock_threshold,
-    COALESCE(SUM(il.quantity), 0)
-        + COALESCE(SUM(COALESCE(adj.total_adjusted, 0)), 0) AS total_stock,
-    CASE
-        WHEN COALESCE(SUM(il.quantity), 0)
-             + COALESCE(SUM(COALESCE(adj.total_adjusted, 0)), 0)
-             <= p.min_stock_threshold
-        THEN TRUE ELSE FALSE
-    END                                          AS is_low_stock        -- REQ-39
-FROM products p
-LEFT JOIN inventory_lots il ON il.product_id = p.product_id
-LEFT JOIN (
-    SELECT ia.lot_id, SUM(ia.quantity_adjusted) AS total_adjusted
-    FROM inventory_adjustments ia
-    GROUP BY ia.lot_id
-) adj ON adj.lot_id = il.lot_id
-GROUP BY
-    p.product_id, p.name, p.category,
-    p.store_location, p.min_stock_threshold;
+--
+-- Database: `hybrid_store`
+--
 
+-- --------------------------------------------------------
 
--- ------------------------------------------------------------
--- V2. vw_active_price
---     Returns the current effective selling price for every
---     product: promotional price if an active rule is running
---     right now, otherwise the default price. Powers REQ-3 and
---     the "active deals" highlight on the web portal (REQ-7).
--- ------------------------------------------------------------
-CREATE OR REPLACE VIEW vw_active_price AS
-SELECT
-    p.product_id,
-    p.name                                               AS product_name,
-    p.category,
-    p.default_selling_price,
-    pr.promotional_price,
-    pr.rule_type,
-    pr.start_date                                        AS deal_start,
-    pr.end_date                                          AS deal_end,
-    COALESCE(pr.promotional_price, p.default_selling_price) AS effective_price,
-    CASE WHEN pr.rule_id IS NOT NULL THEN TRUE ELSE FALSE END AS has_active_deal  -- REQ-7
-FROM products p
-LEFT JOIN price_rules pr
-    ON  pr.product_id = p.product_id
-    AND pr.is_active  = TRUE
-    AND NOW() BETWEEN pr.start_date AND pr.end_date;     -- SRS 5.3: exact datetime comparison
+--
+-- Table structure for table `inventory_adjustments`
+--
 
+CREATE TABLE `inventory_adjustments` (
+  `adjustment_id` int(11) NOT NULL,
+  `lot_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `quantity_adjusted` int(11) NOT NULL CHECK (`quantity_adjusted` <> 0),
+  `reason` varchar(255) DEFAULT NULL,
+  `adjustment_date` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ------------------------------------------------------------
--- V3. vw_low_stock_alerts
---     Filtered subset of vw_product_stock showing only products
---     that have breached their minimum threshold. Feeds the
---     Admin Dashboard alert widget directly (REQ-39).
--- ------------------------------------------------------------
-CREATE OR REPLACE VIEW vw_low_stock_alerts AS
-SELECT
-    product_id,
-    product_name,
-    category,
-    store_location,
-    total_stock,
-    min_stock_threshold,
-    (min_stock_threshold - total_stock) AS units_below_threshold
-FROM vw_product_stock
-WHERE is_low_stock = TRUE;
-
-
--- ------------------------------------------------------------
--- V4. vw_fifo_lot_queue
---     Orders lots per product by date_received ASC so the
---     application always consumes the correct FIFO lot first
---     (REQ-4). Also shows the lot's remaining quantity so the
---     app knows whether to spill over to the next lot.
--- ------------------------------------------------------------
-CREATE OR REPLACE VIEW vw_fifo_lot_queue AS
-SELECT
-    il.product_id,
-    p.name       AS product_name,
-    il.lot_id,
-    il.buying_price,
-    il.date_received,
-    il.quantity  AS original_quantity,
-    il.quantity
-        + COALESCE(SUM(ia.quantity_adjusted), 0) AS remaining_quantity,  -- net of adjustments
-    ROW_NUMBER() OVER (
-        PARTITION BY il.product_id
-        ORDER BY il.date_received ASC
-    )            AS fifo_rank                    -- rank 1 = consume this lot next
-FROM inventory_lots il
-JOIN products p ON p.product_id = il.product_id
-LEFT JOIN inventory_adjustments ia ON ia.lot_id = il.lot_id
-GROUP BY
-    il.lot_id, il.product_id, p.name,
-    il.buying_price, il.date_received, il.quantity
-HAVING remaining_quantity > 0;                   -- hide fully depleted lots
-
-
--- ------------------------------------------------------------
--- V5. vw_financial_report
---     Daily revenue, COGS (FIFO cost), tax collected, and net
---     profit per product. Powers the Financial Reports section
---     (REQ-27): Revenue, COGS, Net Profit columns.
--- ------------------------------------------------------------
-CREATE OR REPLACE VIEW vw_financial_report AS
-SELECT
-    DATE(t.transaction_date)                         AS sale_date,
-    p.product_id,
-    p.name                                           AS product_name,
-    p.category,
-    SUM(CASE WHEN t.is_refund = FALSE
-             THEN ti.quantity ELSE 0 END)            AS units_sold,
-    SUM(CASE WHEN t.is_refund = TRUE
-             THEN ABS(ti.quantity) ELSE 0 END)       AS units_refunded,
-    SUM(CASE WHEN t.is_refund = FALSE
-             THEN ti.quantity * ti.price_applied
-             ELSE -(ABS(ti.quantity) * ti.price_applied) END) AS revenue,    -- REQ-27
-    SUM(CASE WHEN t.is_refund = FALSE
-             THEN ti.quantity * il.buying_price
-             ELSE -(ABS(ti.quantity) * il.buying_price) END)  AS cogs,       -- REQ-27 FIFO cost
-    SUM(CASE WHEN t.is_refund = FALSE
-             THEN ti.tax_applied
-             ELSE -ti.tax_applied END)               AS tax_collected,        -- REQ-35
-    SUM(CASE WHEN t.is_refund = FALSE
-             THEN (ti.quantity * ti.price_applied) - (ti.quantity * il.buying_price)
-             ELSE -((ABS(ti.quantity) * ti.price_applied) - (ABS(ti.quantity) * il.buying_price))
-             END)                                    AS net_profit             -- REQ-27
-FROM transaction_items ti
-JOIN transactions    t  ON t.transaction_id = ti.transaction_id
-JOIN products        p  ON p.product_id     = ti.product_id
-JOIN inventory_lots  il ON il.lot_id        = ti.lot_id
-GROUP BY DATE(t.transaction_date), p.product_id, p.name, p.category;
-
-
--- ------------------------------------------------------------
--- V6. vw_web_orders_dashboard
---     Full order detail view for the POS Web Orders Dashboard.
---     Joins clients, items, and products into a single flat
---     result. Polled every 30 s by the register (REQ-34).
--- ------------------------------------------------------------
-CREATE OR REPLACE VIEW vw_web_orders_dashboard AS
-SELECT
-    wo.order_id,
-    wo.status,
-    wo.order_date,
-    wo.updated_at,
-    c.client_id,
-    c.username                           AS client_username,
-    c.email                              AS client_email,
-    u.username                           AS handled_by_user,
-    p.product_id,
-    p.name                               AS product_name,
-    p.store_location,
-    woi.quantity,
-    woi.price_at_order,
-    (woi.quantity * woi.price_at_order)  AS line_total
-FROM web_orders wo
-JOIN clients        c   ON c.client_id   = wo.client_id
-JOIN web_order_items woi ON woi.order_id = wo.order_id
-JOIN products        p   ON p.product_id = woi.product_id
-LEFT JOIN users      u   ON u.user_id    = wo.handled_by;
-
-
--- ------------------------------------------------------------
--- V7. vw_associate_sales_summary
---     Per-associate transaction count and total revenue.
---     Useful for staff performance review and audit trails
---     (REQ-32 requires user_id on every transaction).
--- ------------------------------------------------------------
-CREATE OR REPLACE VIEW vw_associate_sales_summary AS
-SELECT
-    u.user_id,
-    u.username,
-    u.role,
-    COUNT(CASE WHEN t.is_refund = FALSE THEN 1 END) AS total_sales,
-    COUNT(CASE WHEN t.is_refund = TRUE  THEN 1 END) AS total_refunds,
-    COALESCE(SUM(CASE WHEN t.is_refund = FALSE
-                      THEN t.total_amount END), 0)   AS total_revenue_processed,
-    MIN(t.transaction_date)                          AS first_transaction,
-    MAX(t.transaction_date)                          AS last_transaction
-FROM users u
-LEFT JOIN transactions t ON t.user_id = u.user_id
-GROUP BY u.user_id, u.username, u.role;
-
-
--- ------------------------------------------------------------
--- V8. vw_inventory_adjustment_log
---     Human-readable audit log of all stock adjustments with
---     product name, lot info, user, reason, and impact.
---     Covers REQ-33 (Shrinkage / damage tracking).
--- ------------------------------------------------------------
-CREATE OR REPLACE VIEW vw_inventory_adjustment_log AS
-SELECT
-    ia.adjustment_id,
-    ia.adjustment_date,
-    u.username                                       AS adjusted_by,
-    u.role,
-    p.name                                           AS product_name,
-    p.category,
-    il.lot_id,
-    il.date_received                                 AS lot_received_date,
-    il.buying_price                                  AS lot_buying_price,
-    ia.quantity_adjusted,
-    CASE
-        WHEN ia.quantity_adjusted > 0 THEN 'Addition'
-        ELSE 'Reduction'
-    END                                              AS adjustment_type,
-    COALESCE(ia.reason, 'No reason provided')        AS reason
-FROM inventory_adjustments ia
-JOIN users          u  ON u.user_id    = ia.user_id
-JOIN inventory_lots il ON il.lot_id    = ia.lot_id
-JOIN products       p  ON p.product_id = il.product_id;
-
-
--- ============================================================
--- TRIGGERS
--- ============================================================
-
+--
+-- Triggers `inventory_adjustments`
+--
 DELIMITER $$
-
-
--- ------------------------------------------------------------
--- T1. trg_sale_deduct_stock  (AFTER INSERT on transaction_items)
---     Deducts the sold quantity from the corresponding lot
---     immediately after a sale line item is recorded (REQ-4).
---     Prevents stock from going negative — raises an error
---     instead so the app layer can handle it gracefully.
--- ------------------------------------------------------------
-CREATE TRIGGER trg_sale_deduct_stock
-AFTER INSERT ON transaction_items
-FOR EACH ROW
-BEGIN
-    -- Only deduct for sales (positive quantity); refunds are handled by T2
-    IF NEW.quantity > 0 THEN
-        -- Guard: ensure sufficient stock exists in this lot
-        IF (SELECT quantity FROM inventory_lots WHERE lot_id = NEW.lot_id) < NEW.quantity THEN
-            SIGNAL SQLSTATE '45000'
-                SET MESSAGE_TEXT = 'Insufficient stock in the selected lot for this sale.';
-        END IF;
-
-        UPDATE inventory_lots
-        SET    quantity = quantity - NEW.quantity
-        WHERE  lot_id   = NEW.lot_id;
-    END IF;
-END$$
-
-
--- ------------------------------------------------------------
--- T2. trg_refund_create_lot  (AFTER INSERT on transaction_items)
---     When a refund line is inserted (negative quantity), a new
---     inventory lot is created for the returned goods (REQ-26).
---     The buying_price is copied from the original lot so COGS
---     remain accurate.
--- ------------------------------------------------------------
-CREATE TRIGGER trg_refund_create_lot
-AFTER INSERT ON transaction_items
-FOR EACH ROW
-BEGIN
-    DECLARE v_buying_price DECIMAL(10, 2);
-
-    IF NEW.quantity < 0 THEN
-        -- Retrieve the original lot's cost for accurate FIFO bookkeeping
-        SELECT buying_price INTO v_buying_price
-        FROM   inventory_lots
-        WHERE  lot_id = NEW.lot_id;
-
-        -- Create a new lot stamped NOW() to represent the returned stock
-        INSERT INTO inventory_lots (product_id, quantity, buying_price)
-        VALUES (NEW.product_id, ABS(NEW.quantity), v_buying_price);
-    END IF;
-END$$
-
-
--- ------------------------------------------------------------
--- T3. trg_adjustment_apply  (AFTER INSERT on inventory_adjustments)
---     Applies an inventory adjustment (shrinkage, damage, count
---     correction) directly to the lot quantity (REQ-33).
---     Raises an error if a reduction would drive quantity below 0.
--- ------------------------------------------------------------
-CREATE TRIGGER trg_adjustment_apply
-AFTER INSERT ON inventory_adjustments
-FOR EACH ROW
-BEGIN
+CREATE TRIGGER `trg_adjustment_apply` AFTER INSERT ON `inventory_adjustments` FOR EACH ROW BEGIN
     DECLARE v_current_qty INT;
 
     SELECT quantity INTO v_current_qty
@@ -479,20 +56,46 @@ BEGIN
     UPDATE inventory_lots
     SET    quantity = quantity + NEW.quantity_adjusted
     WHERE  lot_id   = NEW.lot_id;
-END$$
+END
+$$
+DELIMITER ;
 
+-- --------------------------------------------------------
 
--- ------------------------------------------------------------
--- T4. trg_validate_price_rule  (BEFORE INSERT on price_rules)
---     Prevents an overlapping active rule of the same type for
---     the same product, which would cause ambiguous pricing.
---     Supplements the UNIQUE KEY which only catches exact
---     start_date duplicates (REQ-3).
--- ------------------------------------------------------------
-CREATE TRIGGER trg_validate_price_rule
-BEFORE INSERT ON price_rules
-FOR EACH ROW
-BEGIN
+--
+-- Table structure for table `inventory_lots`
+--
+
+CREATE TABLE `inventory_lots` (
+  `lot_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL CHECK (`quantity` >= 0),
+  `buying_price` decimal(10,2) NOT NULL CHECK (`buying_price` >= 0),
+  `date_received` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `price_rules`
+--
+
+CREATE TABLE `price_rules` (
+  `rule_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `rule_type` enum('Deal','Rollback','Clearance','Holiday') NOT NULL,
+  `promotional_price` decimal(10,2) NOT NULL CHECK (`promotional_price` >= 0),
+  `start_date` datetime NOT NULL,
+  `end_date` datetime NOT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ;
+
+--
+-- Triggers `price_rules`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_validate_price_rule` BEFORE INSERT ON `price_rules` FOR EACH ROW BEGIN
     DECLARE v_conflict INT;
 
     SELECT COUNT(*) INTO v_conflict
@@ -507,19 +110,330 @@ BEGIN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'An overlapping active price rule of this type already exists for this product.';
     END IF;
-END$$
+END
+$$
+DELIMITER ;
 
+-- --------------------------------------------------------
 
--- ------------------------------------------------------------
--- T5. trg_order_status_workflow  (BEFORE UPDATE on web_orders)
---     Enforces the legal status transition sequence defined in
---     REQ-34: Pending → Ready for Pickup → Completed.
---     Backward transitions and illegal jumps are rejected.
--- ------------------------------------------------------------
-CREATE TRIGGER trg_order_status_workflow
-BEFORE UPDATE ON web_orders
-FOR EACH ROW
-BEGIN
+--
+-- Table structure for table `products`
+--
+
+CREATE TABLE `products` (
+  `product_id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `default_selling_price` decimal(10,2) NOT NULL CHECK (`default_selling_price` >= 0),
+  `store_location` varchar(100) DEFAULT NULL,
+  `tax_category_id` int(11) NOT NULL,
+  `min_stock_threshold` int(11) DEFAULT 0 CHECK (`min_stock_threshold` >= 0),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tax_categories`
+--
+
+CREATE TABLE `tax_categories` (
+  `tax_category_id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `rate` decimal(5,2) NOT NULL CHECK (`rate` >= 0 and `rate` <= 100),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `tax_categories`
+--
+
+INSERT INTO `tax_categories` (`tax_category_id`, `name`, `rate`, `created_at`) VALUES
+(1, 'Standard', 19.00, '2026-03-16 19:29:48');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `transactions`
+--
+
+CREATE TABLE `transactions` (
+  `transaction_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `total_amount` decimal(10,2) NOT NULL,
+  `is_refund` tinyint(1) DEFAULT 0,
+  `receipt_language` varchar(10) DEFAULT 'en',
+  `transaction_date` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Triggers `transactions`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_default_receipt_language` BEFORE INSERT ON `transactions` FOR EACH ROW BEGIN
+    DECLARE v_lang VARCHAR(10);
+
+    IF NEW.receipt_language IS NULL OR NEW.receipt_language = '' THEN
+        SELECT preferred_lang INTO v_lang
+        FROM   users
+        WHERE  user_id = NEW.user_id;
+
+        SET NEW.receipt_language = COALESCE(v_lang, 'en');
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_prevent_inactive_user_login` BEFORE INSERT ON `transactions` FOR EACH ROW BEGIN
+    DECLARE v_active BOOLEAN;
+
+    SELECT is_active INTO v_active
+    FROM   users
+    WHERE  user_id = NEW.user_id;
+
+    IF v_active = FALSE THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Transaction rejected: the associated user account is inactive.';
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_transaction_total_verify` BEFORE INSERT ON `transactions` FOR EACH ROW BEGIN
+    IF NEW.total_amount <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Transaction total_amount must be greater than zero.';
+    END IF;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `transaction_items`
+--
+
+CREATE TABLE `transaction_items` (
+  `transaction_item_id` int(11) NOT NULL,
+  `transaction_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `lot_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL CHECK (`quantity` <> 0),
+  `price_applied` decimal(10,2) NOT NULL CHECK (`price_applied` >= 0),
+  `tax_applied` decimal(10,2) NOT NULL CHECK (`tax_applied` >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Triggers `transaction_items`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_refund_create_lot` AFTER INSERT ON `transaction_items` FOR EACH ROW BEGIN
+    DECLARE v_buying_price DECIMAL(10, 2);
+
+    IF NEW.quantity < 0 THEN
+        -- Retrieve the original lot's cost for accurate FIFO bookkeeping
+        SELECT buying_price INTO v_buying_price
+        FROM   inventory_lots
+        WHERE  lot_id = NEW.lot_id;
+
+        -- Create a new lot stamped NOW() to represent the returned stock
+        INSERT INTO inventory_lots (product_id, quantity, buying_price)
+        VALUES (NEW.product_id, ABS(NEW.quantity), v_buying_price);
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_sale_deduct_stock` AFTER INSERT ON `transaction_items` FOR EACH ROW BEGIN
+    -- Only deduct for sales (positive quantity); refunds are handled by T2
+    IF NEW.quantity > 0 THEN
+        -- Guard: ensure sufficient stock exists in this lot
+        IF (SELECT quantity FROM inventory_lots WHERE lot_id = NEW.lot_id) < NEW.quantity THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Insufficient stock in the selected lot for this sale.';
+        END IF;
+
+        UPDATE inventory_lots
+        SET    quantity = quantity - NEW.quantity
+        WHERE  lot_id   = NEW.lot_id;
+    END IF;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `user_id` int(11) NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `pin_hash` varchar(255) DEFAULT NULL,
+  `role` enum('Store Associate','Administrator') NOT NULL,
+  `preferred_lang` varchar(10) DEFAULT 'en',
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `user_type` varchar(20) NOT NULL DEFAULT 'client'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_active_price`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_active_price` (
+`product_id` int(11)
+,`product_name` varchar(100)
+,`category` varchar(50)
+,`default_selling_price` decimal(10,2)
+,`promotional_price` decimal(10,2)
+,`rule_type` enum('Deal','Rollback','Clearance','Holiday')
+,`deal_start` datetime
+,`deal_end` datetime
+,`effective_price` decimal(10,2)
+,`has_active_deal` int(1)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_associate_sales_summary`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_associate_sales_summary` (
+`user_id` int(11)
+,`username` varchar(50)
+,`role` enum('Store Associate','Administrator')
+,`total_sales` bigint(21)
+,`total_refunds` bigint(21)
+,`total_revenue_processed` decimal(32,2)
+,`first_transaction` timestamp
+,`last_transaction` timestamp
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_fifo_lot_queue`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_fifo_lot_queue` (
+`product_id` int(11)
+,`product_name` varchar(100)
+,`lot_id` int(11)
+,`buying_price` decimal(10,2)
+,`date_received` timestamp
+,`original_quantity` int(11)
+,`remaining_quantity` decimal(33,0)
+,`fifo_rank` bigint(21)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_financial_report`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_financial_report` (
+`sale_date` date
+,`product_id` int(11)
+,`product_name` varchar(100)
+,`category` varchar(50)
+,`units_sold` decimal(32,0)
+,`units_refunded` decimal(32,0)
+,`revenue` decimal(42,2)
+,`cogs` decimal(42,2)
+,`tax_collected` decimal(32,2)
+,`net_profit` decimal(43,2)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_inventory_adjustment_log`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_inventory_adjustment_log` (
+`adjustment_id` int(11)
+,`adjustment_date` timestamp
+,`adjusted_by` varchar(50)
+,`role` enum('Store Associate','Administrator')
+,`product_name` varchar(100)
+,`category` varchar(50)
+,`lot_id` int(11)
+,`lot_received_date` timestamp
+,`lot_buying_price` decimal(10,2)
+,`quantity_adjusted` int(11)
+,`adjustment_type` varchar(9)
+,`reason` varchar(255)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_low_stock_alerts`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_low_stock_alerts` (
+`product_id` int(11)
+,`product_name` varchar(100)
+,`category` varchar(50)
+,`store_location` varchar(100)
+,`total_stock` decimal(55,0)
+,`min_stock_threshold` int(11)
+,`units_below_threshold` decimal(56,0)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_product_stock`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_product_stock` (
+`product_id` int(11)
+,`product_name` varchar(100)
+,`category` varchar(50)
+,`store_location` varchar(100)
+,`min_stock_threshold` int(11)
+,`total_stock` decimal(55,0)
+,`is_low_stock` int(1)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in structure for view `vw_web_orders_dashboard`
+-- (See below for the actual view)
+--
+CREATE TABLE `vw_web_orders_dashboard` (
+);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `web_orders`
+--
+
+CREATE TABLE `web_orders` (
+  `order_id` int(11) NOT NULL,
+  `client_id` int(11) NOT NULL,
+  `handled_by` int(11) DEFAULT NULL,
+  `status` enum('Pending','Ready for Pickup','Completed') DEFAULT 'Pending',
+  `order_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Triggers `web_orders`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_order_status_workflow` BEFORE UPDATE ON `web_orders` FOR EACH ROW BEGIN
     -- Only validate when the status column actually changes.
     -- LEAVE cannot exit a BEGIN..END block in MySQL (#1308),
     -- so the no-op check is folded into the ELSEIF chain below.
@@ -533,66 +447,297 @@ BEGIN
                 SET MESSAGE_TEXT = 'Invalid order status transition. Allowed: Pending→Ready for Pickup→Completed.';
         END IF;
     END IF;
-END$$
-
-
--- ------------------------------------------------------------
--- T6. trg_transaction_total_verify  (BEFORE INSERT on transactions)
---     Guards against inserting a transaction with a zero or
---     negative total (data quality, supports REQ-27 reporting).
--- ------------------------------------------------------------
-CREATE TRIGGER trg_transaction_total_verify
-BEFORE INSERT ON transactions
-FOR EACH ROW
-BEGIN
-    IF NEW.total_amount <= 0 THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Transaction total_amount must be greater than zero.';
-    END IF;
-END$$
-
-
--- ------------------------------------------------------------
--- T7. trg_default_receipt_language  (BEFORE INSERT on transactions)
---     If no receipt language is specified, inherit it from the
---     processing user's preferred_lang setting (REQ-28 / REQ-23).
--- ------------------------------------------------------------
-CREATE TRIGGER trg_default_receipt_language
-BEFORE INSERT ON transactions
-FOR EACH ROW
-BEGIN
-    DECLARE v_lang VARCHAR(10);
-
-    IF NEW.receipt_language IS NULL OR NEW.receipt_language = '' THEN
-        SELECT preferred_lang INTO v_lang
-        FROM   users
-        WHERE  user_id = NEW.user_id;
-
-        SET NEW.receipt_language = COALESCE(v_lang, 'en');
-    END IF;
-END$$
-
-
--- ------------------------------------------------------------
--- T8. trg_prevent_inactive_user_login  (BEFORE INSERT on transactions)
---     Blocks deactivated staff from processing transactions even
---     if the application layer check is bypassed (REQ-37).
--- ------------------------------------------------------------
-CREATE TRIGGER trg_prevent_inactive_user_login
-BEFORE INSERT ON transactions
-FOR EACH ROW
-BEGIN
-    DECLARE v_active BOOLEAN;
-
-    SELECT is_active INTO v_active
-    FROM   users
-    WHERE  user_id = NEW.user_id;
-
-    IF v_active = FALSE THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Transaction rejected: the associated user account is inactive.';
-    END IF;
-END$$
-
-
+END
+$$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `web_order_items`
+--
+
+CREATE TABLE `web_order_items` (
+  `order_item_id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL CHECK (`quantity` > 0),
+  `price_at_order` decimal(10,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_active_price`
+--
+DROP TABLE IF EXISTS `vw_active_price`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_active_price`  AS SELECT `p`.`product_id` AS `product_id`, `p`.`name` AS `product_name`, `p`.`category` AS `category`, `p`.`default_selling_price` AS `default_selling_price`, `pr`.`promotional_price` AS `promotional_price`, `pr`.`rule_type` AS `rule_type`, `pr`.`start_date` AS `deal_start`, `pr`.`end_date` AS `deal_end`, coalesce(`pr`.`promotional_price`,`p`.`default_selling_price`) AS `effective_price`, CASE WHEN `pr`.`rule_id` is not null THEN 1 ELSE 0 END AS `has_active_deal` FROM (`products` `p` left join `price_rules` `pr` on(`pr`.`product_id` = `p`.`product_id` and `pr`.`is_active` = 1 and current_timestamp() between `pr`.`start_date` and `pr`.`end_date`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_associate_sales_summary`
+--
+DROP TABLE IF EXISTS `vw_associate_sales_summary`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_associate_sales_summary`  AS SELECT `u`.`user_id` AS `user_id`, `u`.`username` AS `username`, `u`.`role` AS `role`, count(case when `t`.`is_refund` = 0 then 1 end) AS `total_sales`, count(case when `t`.`is_refund` = 1 then 1 end) AS `total_refunds`, coalesce(sum(case when `t`.`is_refund` = 0 then `t`.`total_amount` end),0) AS `total_revenue_processed`, min(`t`.`transaction_date`) AS `first_transaction`, max(`t`.`transaction_date`) AS `last_transaction` FROM (`users` `u` left join `transactions` `t` on(`t`.`user_id` = `u`.`user_id`)) GROUP BY `u`.`user_id`, `u`.`username`, `u`.`role` ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_fifo_lot_queue`
+--
+DROP TABLE IF EXISTS `vw_fifo_lot_queue`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_fifo_lot_queue`  AS SELECT `il`.`product_id` AS `product_id`, `p`.`name` AS `product_name`, `il`.`lot_id` AS `lot_id`, `il`.`buying_price` AS `buying_price`, `il`.`date_received` AS `date_received`, `il`.`quantity` AS `original_quantity`, `il`.`quantity`+ coalesce(sum(`ia`.`quantity_adjusted`),0) AS `remaining_quantity`, row_number() over ( partition by `il`.`product_id` order by `il`.`date_received`) AS `fifo_rank` FROM ((`inventory_lots` `il` join `products` `p` on(`p`.`product_id` = `il`.`product_id`)) left join `inventory_adjustments` `ia` on(`ia`.`lot_id` = `il`.`lot_id`)) GROUP BY `il`.`lot_id`, `il`.`product_id`, `p`.`name`, `il`.`buying_price`, `il`.`date_received`, `il`.`quantity` HAVING `remaining_quantity` > 0 ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_financial_report`
+--
+DROP TABLE IF EXISTS `vw_financial_report`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_financial_report`  AS SELECT cast(`t`.`transaction_date` as date) AS `sale_date`, `p`.`product_id` AS `product_id`, `p`.`name` AS `product_name`, `p`.`category` AS `category`, sum(case when `t`.`is_refund` = 0 then `ti`.`quantity` else 0 end) AS `units_sold`, sum(case when `t`.`is_refund` = 1 then abs(`ti`.`quantity`) else 0 end) AS `units_refunded`, sum(case when `t`.`is_refund` = 0 then `ti`.`quantity` * `ti`.`price_applied` else -(abs(`ti`.`quantity`) * `ti`.`price_applied`) end) AS `revenue`, sum(case when `t`.`is_refund` = 0 then `ti`.`quantity` * `il`.`buying_price` else -(abs(`ti`.`quantity`) * `il`.`buying_price`) end) AS `cogs`, sum(case when `t`.`is_refund` = 0 then `ti`.`tax_applied` else -`ti`.`tax_applied` end) AS `tax_collected`, sum(case when `t`.`is_refund` = 0 then `ti`.`quantity` * `ti`.`price_applied` - `ti`.`quantity` * `il`.`buying_price` else -(abs(`ti`.`quantity`) * `ti`.`price_applied` - abs(`ti`.`quantity`) * `il`.`buying_price`) end) AS `net_profit` FROM (((`transaction_items` `ti` join `transactions` `t` on(`t`.`transaction_id` = `ti`.`transaction_id`)) join `products` `p` on(`p`.`product_id` = `ti`.`product_id`)) join `inventory_lots` `il` on(`il`.`lot_id` = `ti`.`lot_id`)) GROUP BY cast(`t`.`transaction_date` as date), `p`.`product_id`, `p`.`name`, `p`.`category` ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_inventory_adjustment_log`
+--
+DROP TABLE IF EXISTS `vw_inventory_adjustment_log`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_inventory_adjustment_log`  AS SELECT `ia`.`adjustment_id` AS `adjustment_id`, `ia`.`adjustment_date` AS `adjustment_date`, `u`.`username` AS `adjusted_by`, `u`.`role` AS `role`, `p`.`name` AS `product_name`, `p`.`category` AS `category`, `il`.`lot_id` AS `lot_id`, `il`.`date_received` AS `lot_received_date`, `il`.`buying_price` AS `lot_buying_price`, `ia`.`quantity_adjusted` AS `quantity_adjusted`, CASE WHEN `ia`.`quantity_adjusted` > 0 THEN 'Addition' ELSE 'Reduction' END AS `adjustment_type`, coalesce(`ia`.`reason`,'No reason provided') AS `reason` FROM (((`inventory_adjustments` `ia` join `users` `u` on(`u`.`user_id` = `ia`.`user_id`)) join `inventory_lots` `il` on(`il`.`lot_id` = `ia`.`lot_id`)) join `products` `p` on(`p`.`product_id` = `il`.`product_id`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_low_stock_alerts`
+--
+DROP TABLE IF EXISTS `vw_low_stock_alerts`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_low_stock_alerts`  AS SELECT `vw_product_stock`.`product_id` AS `product_id`, `vw_product_stock`.`product_name` AS `product_name`, `vw_product_stock`.`category` AS `category`, `vw_product_stock`.`store_location` AS `store_location`, `vw_product_stock`.`total_stock` AS `total_stock`, `vw_product_stock`.`min_stock_threshold` AS `min_stock_threshold`, `vw_product_stock`.`min_stock_threshold`- `vw_product_stock`.`total_stock` AS `units_below_threshold` FROM `vw_product_stock` WHERE `vw_product_stock`.`is_low_stock` = 1 ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_product_stock`
+--
+DROP TABLE IF EXISTS `vw_product_stock`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_product_stock`  AS SELECT `p`.`product_id` AS `product_id`, `p`.`name` AS `product_name`, `p`.`category` AS `category`, `p`.`store_location` AS `store_location`, `p`.`min_stock_threshold` AS `min_stock_threshold`, coalesce(sum(`il`.`quantity`),0) + coalesce(sum(coalesce(`adj`.`total_adjusted`,0)),0) AS `total_stock`, CASE WHEN coalesce(sum(`il`.`quantity`),0) + coalesce(sum(coalesce(`adj`.`total_adjusted`,0)),0) <= `p`.`min_stock_threshold` THEN 1 ELSE 0 END AS `is_low_stock` FROM ((`products` `p` left join `inventory_lots` `il` on(`il`.`product_id` = `p`.`product_id`)) left join (select `ia`.`lot_id` AS `lot_id`,sum(`ia`.`quantity_adjusted`) AS `total_adjusted` from `inventory_adjustments` `ia` group by `ia`.`lot_id`) `adj` on(`adj`.`lot_id` = `il`.`lot_id`)) GROUP BY `p`.`product_id`, `p`.`name`, `p`.`category`, `p`.`store_location`, `p`.`min_stock_threshold` ;
+
+-- --------------------------------------------------------
+
+--
+-- Structure for view `vw_web_orders_dashboard`
+--
+DROP TABLE IF EXISTS `vw_web_orders_dashboard`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vw_web_orders_dashboard`  AS SELECT `wo`.`order_id` AS `order_id`, `wo`.`status` AS `status`, `wo`.`order_date` AS `order_date`, `wo`.`updated_at` AS `updated_at`, `c`.`user_id` AS `client_id`, `c`.`username` AS `client_username`, `c`.`preferred_lang` AS `client_preferred_lang`, `u`.`username` AS `handled_by_user`, `p`.`product_id` AS `product_id`, `p`.`name` AS `product_name`, `p`.`store_location` AS `store_location`, `woi`.`quantity` AS `quantity`, `woi`.`price_at_order` AS `price_at_order`, `woi`.`quantity`* `woi`.`price_at_order` AS `line_total` FROM ((((`web_orders` `wo` join `users` `c` on(`c`.`user_id` = `wo`.`client_id` AND `c`.`user_type` = 'client')) join `web_order_items` `woi` on(`woi`.`order_id` = `wo`.`order_id`)) join `products` `p` on(`p`.`product_id` = `woi`.`product_id`)) left join `users` `u` on(`u`.`user_id` = `wo`.`handled_by`)) ;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `inventory_adjustments`
+--
+ALTER TABLE `inventory_adjustments`
+  ADD PRIMARY KEY (`adjustment_id`),
+  ADD KEY `lot_id` (`lot_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `inventory_lots`
+--
+ALTER TABLE `inventory_lots`
+  ADD PRIMARY KEY (`lot_id`),
+  ADD KEY `product_id` (`product_id`);
+
+--
+-- Indexes for table `price_rules`
+--
+ALTER TABLE `price_rules`
+  ADD PRIMARY KEY (`rule_id`),
+  ADD UNIQUE KEY `uq_active_rule` (`product_id`,`rule_type`,`start_date`);
+
+--
+-- Indexes for table `products`
+--
+ALTER TABLE `products`
+  ADD PRIMARY KEY (`product_id`),
+  ADD KEY `tax_category_id` (`tax_category_id`);
+
+--
+-- Indexes for table `tax_categories`
+--
+ALTER TABLE `tax_categories`
+  ADD PRIMARY KEY (`tax_category_id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
+-- Indexes for table `transactions`
+--
+ALTER TABLE `transactions`
+  ADD PRIMARY KEY (`transaction_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `transaction_items`
+--
+ALTER TABLE `transaction_items`
+  ADD PRIMARY KEY (`transaction_item_id`),
+  ADD KEY `transaction_id` (`transaction_id`),
+  ADD KEY `product_id` (`product_id`),
+  ADD KEY `lot_id` (`lot_id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`user_id`),
+  ADD UNIQUE KEY `username` (`username`);
+
+--
+-- Indexes for table `web_orders`
+--
+ALTER TABLE `web_orders`
+  ADD PRIMARY KEY (`order_id`),
+  ADD KEY `client_id` (`client_id`),
+  ADD KEY `handled_by` (`handled_by`);
+
+--
+-- Indexes for table `web_order_items`
+--
+ALTER TABLE `web_order_items`
+  ADD PRIMARY KEY (`order_item_id`),
+  ADD KEY `order_id` (`order_id`),
+  ADD KEY `product_id` (`product_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `inventory_adjustments`
+--
+ALTER TABLE `inventory_adjustments`
+  MODIFY `adjustment_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `inventory_lots`
+--
+ALTER TABLE `inventory_lots`
+  MODIFY `lot_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `price_rules`
+--
+ALTER TABLE `price_rules`
+  MODIFY `rule_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `products`
+--
+ALTER TABLE `products`
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `tax_categories`
+--
+ALTER TABLE `tax_categories`
+  MODIFY `tax_category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `transactions`
+--
+ALTER TABLE `transactions`
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `transaction_items`
+--
+ALTER TABLE `transaction_items`
+  MODIFY `transaction_item_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `web_orders`
+--
+ALTER TABLE `web_orders`
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `web_order_items`
+--
+ALTER TABLE `web_order_items`
+  MODIFY `order_item_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `inventory_adjustments`
+--
+ALTER TABLE `inventory_adjustments`
+  ADD CONSTRAINT `inventory_adjustments_ibfk_1` FOREIGN KEY (`lot_id`) REFERENCES `inventory_lots` (`lot_id`),
+  ADD CONSTRAINT `inventory_adjustments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `inventory_lots`
+--
+ALTER TABLE `inventory_lots`
+  ADD CONSTRAINT `inventory_lots_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`);
+
+--
+-- Constraints for table `price_rules`
+--
+ALTER TABLE `price_rules`
+  ADD CONSTRAINT `price_rules_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`);
+
+--
+-- Constraints for table `products`
+--
+ALTER TABLE `products`
+  ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`tax_category_id`) REFERENCES `tax_categories` (`tax_category_id`);
+
+--
+-- Constraints for table `transactions`
+--
+ALTER TABLE `transactions`
+  ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `transaction_items`
+--
+ALTER TABLE `transaction_items`
+  ADD CONSTRAINT `transaction_items_ibfk_1` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`transaction_id`),
+  ADD CONSTRAINT `transaction_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`),
+  ADD CONSTRAINT `transaction_items_ibfk_3` FOREIGN KEY (`lot_id`) REFERENCES `inventory_lots` (`lot_id`);
+
+--
+-- Constraints for table `web_orders`
+--
+ALTER TABLE `web_orders`
+  ADD CONSTRAINT `web_orders_ibfk_1` FOREIGN KEY (`client_id`) REFERENCES `users` (`user_id`),
+  ADD CONSTRAINT `web_orders_ibfk_2` FOREIGN KEY (`handled_by`) REFERENCES `users` (`user_id`);
+
+--
+-- Constraints for table `web_order_items`
+--
+ALTER TABLE `web_order_items`
+  ADD CONSTRAINT `web_order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `web_orders` (`order_id`),
+  ADD CONSTRAINT `web_order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`);
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
