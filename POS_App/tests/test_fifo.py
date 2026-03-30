@@ -14,7 +14,7 @@ def test_fifo_lot_order():
     cur = conn.cursor(dictionary=True)
 
     # Get first two lots for any product
-    cur.execute("SELECT lot_id, product_id, quantity, date_received FROM vw_fifo_lot_queue LIMIT 10")
+    cur.execute("SELECT lot_id, product_id, remaining_quantity, date_received FROM vw_fifo_lot_queue LIMIT 10")
     rows = cur.fetchall()
     cur.close(); conn.close()
 

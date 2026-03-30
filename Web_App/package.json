@@ -1,6 +1,7 @@
 {
-  "name": "aklsof_ts",
-  "version": "0.1.0",
+  "name": "AKLIShop",
+  "version": "0.2.0",
+  "main": "package-lock.json",
   "private": true,
   "scripts": {
     "dev": "next dev",

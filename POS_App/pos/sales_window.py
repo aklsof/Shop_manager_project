@@ -42,6 +42,22 @@ class SalesWindow:
                                      command=self._toggle_refund)
         self.refund_btn.pack(side='right', padx=12, pady=8)
 
+        # Orders & Pickups tab buttons (packed BEFORE main so it claims the bottom edge)
+        bottom_frame = tk.Frame(self.root, bg=COLOR_BG)
+        bottom_frame.pack(side='bottom', fill='x', padx=12, pady=4)
+
+        tk.Button(bottom_frame, text="📦 Manage & Validate Web Pickups",
+                  font=("Helvetica", 9, "bold"), bg=COLOR_GREEN, fg=COLOR_WHITE,
+                  relief='flat', command=self._open_orders).pack(side='right', padx=4)
+
+        tk.Button(bottom_frame, text="📋 Web Orders Dashboard",
+                  font=("Helvetica", 9), bg=COLOR_WHITE, fg=COLOR_RED,
+                  relief='flat', command=self._open_orders).pack(side='right', padx=4)
+
+        tk.Button(bottom_frame, text="⚙️ Inventory Adjustments (Receive Stock)",
+                  font=("Helvetica", 9), bg=COLOR_MUTED, fg=COLOR_WHITE,
+                  relief='flat', command=self._open_adjustments).pack(side='left', padx=4)
+
         # Main layout: left=products, right=cart
         main = tk.Frame(self.root, bg=COLOR_BG)
         main.pack(fill='both', expand=True, padx=12, pady=12)
@@ -58,6 +74,10 @@ class SalesWindow:
         self.search_var.trace('w', lambda *a: self._filter_products())
         tk.Entry(search_frame, textvariable=self.search_var, font=("Helvetica", 10),
                  bd=1, relief='solid').pack(side='left', padx=8, fill='x', expand=True)
+
+        tk.Button(search_frame, text="🔄 Refresh", font=("Helvetica", 8, "bold"),
+                  bg=COLOR_GREEN, fg=COLOR_WHITE, relief='flat', padx=8,
+                  command=self._load_products).pack(side='right')
 
         cols = ("name", "category", "price", "stock")
         self.product_tree = ttk.Treeview(left, columns=cols, show='headings', height=16)
@@ -100,10 +120,7 @@ class SalesWindow:
                   font=("Helvetica", 9), bg=COLOR_MUTED, fg=COLOR_WHITE,
                   relief='flat', padx=8, pady=6, command=self._clear_cart).pack(fill='x')
 
-        # Orders tab button
-        tk.Button(self.root, text="📋 Web Orders Dashboard",
-                  font=("Helvetica", 9), bg=COLOR_WHITE, fg=COLOR_RED,
-                  relief='flat', command=self._open_orders).pack(side='bottom', anchor='e', padx=12, pady=4)
+
 
         self.all_products = []
 
@@ -154,20 +171,32 @@ class SalesWindow:
         if not product: return
 
         stock = int(product['total_stock'])
-        if stock <= 0 and not self.refund_mode:
-            messagebox.showwarning("Out of Stock", f"'{product['name']}' is out of stock.")
+
+        from tkinter import simpledialog
+        input_qty = simpledialog.askinteger("Quantity", f"Quantity for {product['name']}:",
+                                            parent=self.root, initialvalue=1, minvalue=1)
+        if not input_qty:
+            return  # user cancelled
+
+        if stock < input_qty and not self.refund_mode:
+            messagebox.showwarning("Not Enough Stock", f"Only {stock} available for '{product['name']}'.")
             return
 
         # Check if already in cart
         for item in self.cart:
             if item['product_id'] == product_id:
-                qty_delta = -1 if self.refund_mode else 1
+                qty_delta = -input_qty if self.refund_mode else input_qty
+                
+                if not self.refund_mode and (item['quantity'] + qty_delta) > stock:
+                    messagebox.showwarning("Not Enough Stock", f"Cannot add {input_qty} more. Only {stock} total exist in stock.")
+                    return
+                
                 item['quantity'] += qty_delta
                 if item['quantity'] == 0: self.cart.remove(item)
                 self._refresh_cart()
                 return
 
-        qty = -1 if self.refund_mode else 1
+        qty = -input_qty if self.refund_mode else input_qty
         self.cart.append({
             'product_id': product_id,
             'name': product['name'],
@@ -218,10 +247,17 @@ class SalesWindow:
             conn = get_connection()
             cur = conn.cursor(dictionary=True)
 
+            # Calculate total amount
+            total_amount = sum(
+                (item['unit_price'] * abs(item['quantity'])) * (1 + item['tax_rate'] / 100)
+                * (1 if item['quantity'] > 0 else -1)
+                for item in self.cart
+            )
+
             # Insert transaction
             cur.execute(
-                "INSERT INTO transactions (user_id, transaction_type) VALUES (%s, %s)",
-                (self.user['user_id'], 'Refund' if self.refund_mode else 'Sale')
+                "INSERT INTO transactions (user_id, is_refund, total_amount) VALUES (%s, %s, %s)",
+                (self.user['user_id'], 1 if self.refund_mode else 0, total_amount)
             )
             transaction_id = cur.lastrowid
 
@@ -229,7 +265,7 @@ class SalesWindow:
             for item in self.cart:
                 # FIFO: get oldest lot with stock
                 cur.execute(
-                    """SELECT lot_id, quantity FROM vw_fifo_lot_queue
+                    """SELECT lot_id, remaining_quantity FROM vw_fifo_lot_queue
                        WHERE product_id = %s LIMIT 1""",
                     (item['product_id'],)
                 )
@@ -244,10 +280,16 @@ class SalesWindow:
 
                 cur.execute(
                     """INSERT INTO transaction_items
-                       (transaction_id, product_id, lot_id, quantity, price_applied, tax_amount)
+                       (transaction_id, product_id, lot_id, quantity, price_applied, tax_applied)
                        VALUES (%s, %s, %s, %s, %s, %s)""",
                     (transaction_id, item['product_id'], lot_id, qty, unit_price, tax_amount)
                 )
+
+                if lot_id:
+                    cur.execute(
+                        "UPDATE inventory_lots SET quantity = quantity - %s WHERE lot_id = %s",
+                        (qty, lot_id)
+                    )
 
                 receipt_items.append({
                     'name': item['name'], 'quantity': abs(qty),
@@ -276,3 +318,7 @@ class SalesWindow:
     def _open_orders(self):
         from orders.web_orders_dashboard import WebOrdersDashboard
         WebOrdersDashboard(self.root, self.user)
+
+    def _open_adjustments(self):
+        from inventory.adjustment_window import AdjustmentWindow
+        AdjustmentWindow(self.root, self.user)

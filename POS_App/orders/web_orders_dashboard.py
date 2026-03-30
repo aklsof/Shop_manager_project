@@ -68,6 +68,8 @@ class WebOrdersDashboard:
                   padx=10, pady=6, command=self._refresh).pack(side='right', padx=4)
 
     def _refresh(self):
+        if not self.window.winfo_exists():
+            return
         try:
             conn = get_connection()
             cur = conn.cursor(dictionary=True)
@@ -114,15 +116,108 @@ class WebOrdersDashboard:
             messagebox.showwarning("No Selection", "Select an order first.")
             return
         order_id = int(sel[0])
-        try:
-            conn = get_connection()
-            cur = conn.cursor()
-            cur.execute(
-                "UPDATE web_orders SET status = %s, handled_by = %s WHERE order_id = %s",
-                (new_status, self.user['user_id'], order_id)
-            )
-            conn.commit()
-            cur.close(); conn.close()
-            self._refresh()
-        except Exception as e:
-            messagebox.showerror("Update Error", str(e))
+        current_status = self.tree.item(sel[0])['values'][2]
+
+        if new_status == 'Completed' and current_status != 'Completed':
+            # Execute checkout flow for web order
+            try:
+                conn = get_connection()
+                cur = conn.cursor(dictionary=True)
+
+                # Get items
+                cur.execute(
+                    """SELECT woi.product_id, woi.quantity, woi.price_at_order,
+                              p.name, t.rate AS tax_rate
+                       FROM web_order_items woi
+                       JOIN products p ON p.product_id = woi.product_id
+                       JOIN tax_categories t ON t.tax_category_id = p.tax_category_id
+                       WHERE woi.order_id = %s""",
+                    (order_id,)
+                )
+                items = cur.fetchall()
+
+                # Calculate total
+                total_amount = sum(
+                    (float(i['price_at_order']) * i['quantity']) * (1 + float(i['tax_rate']) / 100)
+                    for i in items
+                )
+
+                # Create transaction
+                cur.execute(
+                    "INSERT INTO transactions (user_id, is_refund, total_amount) VALUES (%s, %s, %s)",
+                    (self.user['user_id'], 0, total_amount)
+                )
+                transaction_id = cur.lastrowid
+
+                receipt_items = []
+                for item in items:
+                    qty = item['quantity']
+                    unit_price = float(item['price_at_order'])
+                    tax_rate = float(item['tax_rate'])
+                    line_total = unit_price * qty
+                    tax_amount = line_total * tax_rate / 100
+
+                    # FIFO lot
+                    cur.execute(
+                        """SELECT lot_id FROM vw_fifo_lot_queue
+                           WHERE product_id = %s LIMIT 1""",
+                        (item['product_id'],)
+                    )
+                    lot = cur.fetchone()
+                    lot_id = lot['lot_id'] if lot else None
+
+                    cur.execute(
+                        """INSERT INTO transaction_items
+                           (transaction_id, product_id, lot_id, quantity, price_applied, tax_applied)
+                           VALUES (%s, %s, %s, %s, %s, %s)""",
+                        (transaction_id, item['product_id'], lot_id, qty, unit_price, tax_amount)
+                    )
+
+                    if lot_id:
+                        cur.execute(
+                            "UPDATE inventory_lots SET quantity = quantity - %s WHERE lot_id = %s",
+                            (qty, lot_id)
+                        )
+
+                    receipt_items.append({
+                        'name': item['name'], 'quantity': qty,
+                        'unit_price': unit_price, 'tax_rate': tax_rate,
+                        'line_total': line_total, 'tax_amount': tax_amount,
+                    })
+
+                # Mark order completed
+                cur.execute(
+                    "UPDATE web_orders SET status = %s, handled_by = %s WHERE order_id = %s",
+                    (new_status, self.user['user_id'], order_id)
+                )
+
+                conn.commit()
+                cur.close(); conn.close()
+
+                # Print receipt
+                from pos.receipt import generate_receipt
+                pdf_path = generate_receipt(transaction_id, self.user['username'], receipt_items)
+                try:
+                    os.startfile(pdf_path)
+                except Exception:
+                    pass
+
+                messagebox.showinfo("Completed", f"Web Order #{order_id} picked up!\nTransaction #{transaction_id} saved.")
+                self._refresh()
+
+            except Exception as e:
+                messagebox.showerror("Checkout Error", str(e))
+        else:
+            # Just advance status
+            try:
+                conn = get_connection()
+                cur = conn.cursor()
+                cur.execute(
+                    "UPDATE web_orders SET status = %s, handled_by = %s WHERE order_id = %s",
+                    (new_status, self.user['user_id'], order_id)
+                )
+                conn.commit()
+                cur.close(); conn.close()
+                self._refresh()
+            except Exception as e:
+                messagebox.showerror("Update Error", str(e))

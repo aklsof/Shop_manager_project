@@ -13,7 +13,7 @@ def test_tax_calculation():
     conn = get_connection()
     cur = conn.cursor(dictionary=True)
     cur.execute(
-        """SELECT ti.price_applied, ti.tax_amount, ti.quantity,
+        """SELECT ti.price_applied, ti.tax_applied, ti.quantity,
                   t.rate AS tax_rate
            FROM transaction_items ti
            JOIN transactions tx ON tx.transaction_id = ti.transaction_id
@@ -32,7 +32,7 @@ def test_tax_calculation():
         qty = abs(int(row['quantity']))
         rate = float(row['tax_rate'])
         expected_tax = round(price * qty * rate / 100, 2)
-        actual_tax = round(float(row['tax_amount']), 2)
+        actual_tax = round(float(row['tax_applied']), 2)
         assert abs(expected_tax - actual_tax) < 0.01, (
             f"Tax mismatch: expected {expected_tax}, got {actual_tax} "
             f"(price={price}, qty={qty}, rate={rate}%)"

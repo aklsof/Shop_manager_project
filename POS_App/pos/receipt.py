@@ -101,7 +101,7 @@ def generate_receipt(transaction_id: int, user_name: str, items: list, output_di
     y -= 5 * mm
     c.setFont("Helvetica-Bold", 11)
     c.drawString(5 * mm, y, "TOTAL:")
-    c.drawRightString(width - 5 * mm, y, f"{subtotal:.2f} DA")
+    c.drawRightString(width - 5 * mm, y, f"{(subtotal + total_tax):.2f} DA")
     y -= 8 * mm
 
     # Footer
