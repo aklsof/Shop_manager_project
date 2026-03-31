@@ -45,8 +45,18 @@ export default function ProductPage() {
         <button className="btn-back" onClick={() => router.push('/')}>← Back to Shop</button>
         <div className="product-detail-card">
           {product.has_active_deal ? <span className="deal-badge">{product.rule_type}</span> : null}
+          {product.img_url && (
+            <img
+              src={product.img_url}
+              alt={product.name}
+              style={{ width: '100%', maxHeight: 280, objectFit: 'cover', borderRadius: 12, marginBottom: 16 }}
+            />
+          )}
           <h1>{product.name}</h1>
           <p className="product-category">{product.category}</p>
+          {product.description && (
+            <p style={{ color: '#475569', marginBottom: 12, lineHeight: 1.6 }}>{product.description}</p>
+          )}
           <div className="price-row">
             <span className="price price-lg">{Number(product.effective_price).toFixed(2)} DA</span>
             {product.has_active_deal

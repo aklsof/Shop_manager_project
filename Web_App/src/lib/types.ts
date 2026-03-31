@@ -5,6 +5,8 @@
 export interface Product {
   product_id: number;
   name: string;
+  description: string;
+  img_url: string;
   category: string;
   default_selling_price: number;
   store_location: string | null;
@@ -27,6 +29,12 @@ export interface TaxCategory {
   tax_category_id: number;
   name: string;
   rate: number;
+  created_at?: string;
+}
+
+export interface ProductCategory {
+  category_id: number;
+  name: string;
   created_at?: string;
 }
 

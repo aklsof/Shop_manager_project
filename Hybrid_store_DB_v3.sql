@@ -130,6 +130,8 @@ DELIMITER ;
 CREATE TABLE IF NOT EXISTS `products` (
   `product_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `img_url` varchar(512) DEFAULT NULL,
   `category` varchar(50) NOT NULL,
   `default_selling_price` decimal(10,2) NOT NULL CHECK (`default_selling_price` >= 0),
   `store_location` varchar(100) DEFAULT NULL,
@@ -575,7 +577,7 @@ CREATE OR REPLACE VIEW `vw_product_stock` AS SELECT `p`.`product_id` AS `product
 --
 DROP TABLE IF EXISTS `vw_web_orders_dashboard`;
 
-CREATE OR REPLACE VIEW `vw_web_orders_dashboard` AS SELECT `wo`.`order_id` AS `order_id`, `wo`.`status` AS `status`, `wo`.`order_date` AS `order_date`, `wo`.`updated_at` AS `updated_at`, `c`.`user_id` AS `client_id`, `c`.`username` AS `client_username`, `c`.`preferred_lang` AS `client_preferred_lang`, `u`.`username` AS `handled_by_user`, `p`.`product_id` AS `product_id`, `p`.`name` AS `product_name`, `p`.`store_location` AS `store_location`, `woi`.`quantity` AS `quantity`, `woi`.`price_at_order` AS `price_at_order`, `woi`.`quantity`* `woi`.`price_at_order` AS `line_total` FROM ((((`web_orders` `wo` join `users` `c` on(`c`.`user_id` = `wo`.`client_id` AND `c`.`user_type` = 'client')) join `web_order_items` `woi` on(`woi`.`order_id` = `wo`.`order_id`)) join `products` `p` on(`p`.`product_id` = `woi`.`product_id`)) left join `users` `u` on(`u`.`user_id` = `wo`.`handled_by`)) ;
+CREATE OR REPLACE VIEW `vw_web_orders_dashboard` AS SELECT `wo`.`order_id` AS `order_id`, `wo`.`status` AS `status`, `wo`.`order_date` AS `order_date`, `wo`.`updated_at` AS `updated_at`, `c`.`user_id` AS `client_id`, `c`.`username` AS `client_username`, `c`.`preferred_lang` AS `client_preferred_lang`, `u`.`username` AS `handled_by_user`, `p`.`product_id` AS `product_id`, `p`.`name` AS `product_name`, `p`.`store_location` AS `store_location`, `woi`.`quantity` AS `quantity`, `woi`.`price_at_order` AS `price_at_order`, `woi`.`quantity`* `woi`.`price_at_order` AS `line_total` FROM ((((`web_orders` `wo` join `users` `c` on(`c`.`user_id` = `wo`.`client_id`)) join `web_order_items` `woi` on(`woi`.`order_id` = `wo`.`order_id`)) join `products` `p` on(`p`.`product_id` = `woi`.`product_id`)) left join `users` `u` on(`u`.`user_id` = `wo`.`handled_by`)) ;
 
 --
 -- Indexes for dumped tables
@@ -678,6 +680,13 @@ ALTER TABLE `price_rules`
 --
 ALTER TABLE `products`
   MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Add new columns to `products` if upgrading an existing database
+--
+ALTER TABLE `products`
+  ADD COLUMN IF NOT EXISTS `description` text DEFAULT NULL AFTER `name`,
+  ADD COLUMN IF NOT EXISTS `img_url` varchar(512) DEFAULT NULL AFTER `description`;
 
 --
 -- AUTO_INCREMENT for table `tax_categories`

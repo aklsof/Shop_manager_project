@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT p.product_id, p.name, p.category, p.default_selling_price,
+      `SELECT p.product_id, p.name, p.description, p.img_url, p.category, p.default_selling_price,
               p.store_location, p.tax_category_id, p.min_stock_threshold,
               t.name AS tax_category_name, t.rate AS tax_rate,
               COALESCE(v.effective_price, p.default_selling_price) AS effective_price,

@@ -1,6 +1,6 @@
 {
   "name": "AKLIShop",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "main": "package-lock.json",
   "private": true,
   "scripts": {

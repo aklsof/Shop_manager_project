@@ -6,10 +6,10 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Product } from '@/lib/types';
 
-const CATEGORIES = ['All', 'Cigarettes', 'Drinks', 'Snacks'];
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>(['All']);
   const [category, setCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<{ [id: number]: number }>({});
@@ -19,6 +19,13 @@ export default function HomePage() {
   useEffect(() => {
     const saved = sessionStorage.getItem('akli_cart');
     if (saved) setCart(JSON.parse(saved));
+    // Load categories dynamically
+    fetch('/api/categories')
+      .then(r => r.json())
+      .then((cats: { name: string }[]) => {
+        setCategories(['All', ...cats.map(c => c.name)]);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -52,7 +59,7 @@ export default function HomePage() {
       <div className="shop-container">
         {/* Category tabs */}
         <div className="category-tabs">
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button
               key={cat}
               className={`cat-tab${category === cat ? ' active' : ''}`}
@@ -80,6 +87,13 @@ export default function HomePage() {
             {products.map(product => (
               <div key={product.product_id} className="product-card">
                 {product.has_active_deal ? <span className="deal-badge">{product.rule_type}</span> : null}
+                {product.img_url && (
+                  <img
+                    src={product.img_url}
+                    alt={product.name}
+                    style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: '8px 8px 0 0', display: 'block' }}
+                  />
+                )}
                 <div className="product-info" onClick={() => router.push(`/product/${product.product_id}`)}>
                   <h3>{product.name}</h3>
                   <p className="product-category">{product.category}</p>

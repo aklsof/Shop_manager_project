@@ -36,10 +36,12 @@ export default function AdminDashboard() {
 
   const adminLinks = [
     { href: '/admin/products', label: '📦 Products', desc: 'Add & manage products' },
+    { href: '/admin/categories', label: '🗂️ Categories', desc: 'Manage product categories' },
     { href: '/admin/stock', label: '📥 Stock', desc: 'Receive new inventory' },
     { href: '/admin/adjustments', label: '🔧 Adjustments', desc: 'Shrinkage & damage' },
     { href: '/admin/price-rules', label: '🏷️ Price Rules', desc: 'Deals & promotions' },
     { href: '/admin/users', label: '👥 Users', desc: 'Manage staff accounts' },
+    { href: '/admin/statistics', label: '📈 Statistics', desc: 'Daily, monthly & yearly analytics' },
     { href: '/admin/reports', label: '📊 Reports', desc: 'Revenue & profit' },
     { href: '/admin/tax-categories', label: '🧾 Tax', desc: 'Tax categories' },
   ];

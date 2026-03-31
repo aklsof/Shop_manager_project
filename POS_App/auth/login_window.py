@@ -11,6 +11,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from config import APP_NAME, COLOR_RED, COLOR_RED_DK, COLOR_GREEN, COLOR_WHITE, COLOR_BG, COLOR_TEXT, COLOR_MUTED, COLOR_BORDER
 from db import get_connection
+from auth.registration_window import RegistrationWindow
 
 
 class LoginWindow:
@@ -58,7 +59,12 @@ class LoginWindow:
                               bg=COLOR_RED, fg=COLOR_WHITE, relief='flat', cursor='hand2',
                               padx=24, pady=8, command=self._handle_login,
                               activebackground=COLOR_RED_DK, activeforeground=COLOR_WHITE)
-        login_btn.pack(fill='x')
+        login_btn.pack(fill='x', pady=(0, 8))
+        
+        register_btn = tk.Button(btn_frame, text="Register", font=("Helvetica", 10, "bold"),
+                              bg=COLOR_MUTED, fg=COLOR_WHITE, relief='flat', cursor='hand2',
+                              padx=24, pady=8, command=self._open_registration)
+        register_btn.pack(fill='x')
         self.root.bind('<Return>', lambda e: self._handle_login())
 
     def _handle_login(self):
@@ -98,6 +104,9 @@ class LoginWindow:
 
         except Exception as e:
             self._show_error(f"Database error: {e}")
+
+    def _open_registration(self):
+        RegistrationWindow(self.root)
 
     def _show_error(self, msg):
         self.error_label.config(text=msg)

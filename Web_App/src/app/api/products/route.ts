@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get('category');
 
     let query = `
-      SELECT p.product_id, p.name, p.category, p.default_selling_price,
+      SELECT p.product_id, p.name, p.description, p.img_url, p.category, p.default_selling_price,
              p.store_location, p.tax_category_id, p.min_stock_threshold,
              t.name AS tax_category_name, t.rate AS tax_rate,
              COALESCE(v.effective_price, p.default_selling_price) AS effective_price,
@@ -32,8 +32,8 @@ export async function GET(req: NextRequest) {
       params.push(category);
     }
 
-    query += ' GROUP BY p.product_id, p.name, p.category, p.default_selling_price, p.store_location, p.tax_category_id, p.min_stock_threshold, t.name, t.rate, v.effective_price, v.promotional_price, v.rule_type, v.has_active_deal';
-    query += ' ORDER BY p.category, p.name';
+    query += ' GROUP BY p.product_id, p.name, p.description, p.img_url, p.category, p.default_selling_price, p.store_location, p.tax_category_id, p.min_stock_threshold, t.name, t.rate, v.effective_price, v.promotional_price, v.rule_type, v.has_active_deal';
+    query += ' ORDER BY COALESCE(v.has_active_deal, 0) DESC, p.category, p.name';
 
     const [rows] = await pool.query<RowDataPacket[]>(query, params);
     return NextResponse.json(rows);
