@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { WebOrder } from '@/lib/types';
+import { useLang } from '@/lib/i18n';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<WebOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useLang();
 
   useEffect(() => {
     fetch('/api/orders')
@@ -16,6 +18,13 @@ export default function OrdersPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  function translateStatus(status: string) {
+    if (status === 'Pending') return t('pending');
+    if (status === 'Ready for Pickup') return t('ready_for_pickup');
+    if (status === 'Completed') return t('completed');
+    return status;
+  }
+
   const statusColor = (s: string) =>
     s === 'Completed' ? '#27ae60' : s === 'Ready for Pickup' ? '#f39c12' : '#2980b9';
 
@@ -23,19 +32,19 @@ export default function OrdersPage() {
     <>
       <Navbar />
       <div className="shop-container">
-        <h1 className="page-title">My Orders</h1>
+        <h1 className="page-title">{t('orders_title')}</h1>
         {loading ? (
-          <div className="loading-spinner"><p>Loading…</p></div>
+          <div className="loading-spinner"><p>{t('loading')}</p></div>
         ) : orders.length === 0 ? (
-          <div className="empty-state">No orders yet. <a href="/">Start shopping</a></div>
+          <div className="empty-state">{t('cart_empty')} <a href="/">{t('nav_shop')}</a></div>
         ) : (
           <div className="orders-list">
             {orders.map(order => (
               <div key={order.order_id} className="order-card">
                 <div className="order-header">
-                  <span className="order-id">Order #{order.order_id}</span>
+                  <span className="order-id">{t('order_id')}{order.order_id}</span>
                   <span className="order-status" style={{ color: statusColor(order.status) }}>
-                    ● {order.status}
+                    ● {translateStatus(order.status)}
                   </span>
                   <span className="order-date">{new Date(order.order_date).toLocaleDateString()}</span>
                 </div>

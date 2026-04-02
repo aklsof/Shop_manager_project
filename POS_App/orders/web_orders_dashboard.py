@@ -2,6 +2,7 @@
 orders/web_orders_dashboard.py — Web Orders Dashboard for POS.
 REQ-34: Poll DB every 30 s | Show orders from vw_web_orders_dashboard.
 Buttons to advance status: Pending → Ready for Pickup → Completed.
+i18n: All strings from locale module.
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -10,6 +11,7 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from config import COLOR_RED, COLOR_GREEN, COLOR_WHITE, COLOR_BG, COLOR_MUTED
 from db import get_connection
+import locale as pos_locale
 
 POLL_INTERVAL = 30_000  # ms
 
@@ -18,7 +20,7 @@ class WebOrdersDashboard:
     def __init__(self, parent: tk.Tk, user: dict):
         self.user = user
         self.window = tk.Toplevel(parent)
-        self.window.title("Web Orders Dashboard")
+        self.window.title(pos_locale.t("web_orders_title"))
         self.window.geometry("860x500")
         self.window.configure(bg=COLOR_BG)
         self._build_ui()
@@ -27,26 +29,39 @@ class WebOrdersDashboard:
     def _build_ui(self):
         header = tk.Frame(self.window, bg=COLOR_RED, height=45)
         header.pack(fill='x')
-        tk.Label(header, text="💻 Web Orders Dashboard",
+        tk.Label(header, text=pos_locale.t("web_orders_title"),
                  font=("Helvetica", 12, "bold"), bg=COLOR_RED, fg=COLOR_WHITE, padx=12).pack(side='left', pady=8)
-        tk.Label(header, text="Auto-refreshes every 30 s",
+        tk.Label(header, text=pos_locale.t("auto_refresh"),
                  font=("Helvetica", 8), bg=COLOR_RED, fg=COLOR_WHITE).pack(side='right', padx=12)
 
         # Status filter
         filter_frame = tk.Frame(self.window, bg=COLOR_BG, pady=8)
         filter_frame.pack(fill='x', padx=12)
-        tk.Label(filter_frame, text="Filter:", bg=COLOR_BG, font=("Helvetica", 9, "bold")).pack(side='left')
+        tk.Label(filter_frame, text=pos_locale.t("filter"), bg=COLOR_BG, font=("Helvetica", 9, "bold")).pack(side='left')
+
         self.status_var = tk.StringVar(value="All")
-        for s in ["All", "Pending", "Ready for Pickup", "Completed"]:
-            tk.Radiobutton(filter_frame, text=s, variable=self.status_var, value=s,
+        # We map translated label → DB value
+        self._status_options = [
+            (pos_locale.t("all"),             "All"),
+            (pos_locale.t("pending"),         "Pending"),
+            (pos_locale.t("ready_for_pickup"),"Ready for Pickup"),
+            (pos_locale.t("completed"),       "Completed"),
+        ]
+        for label, value in self._status_options:
+            tk.Radiobutton(filter_frame, text=label, variable=self.status_var, value=value,
                            bg=COLOR_BG, command=self._refresh).pack(side='left', padx=4)
 
         # Orders table
         cols = ("order_id", "client", "status", "items", "order_date")
         self.tree = ttk.Treeview(self.window, columns=cols, show='headings', height=15)
-        for col, hdr, w in zip(cols,
-                                ["Order #", "Client", "Status", "Items", "Date"],
-                                [70, 120, 150, 280, 130]):
+        headers = [
+            pos_locale.t("order_num"),
+            pos_locale.t("client"),
+            pos_locale.t("status"),
+            pos_locale.t("items"),
+            pos_locale.t("date"),
+        ]
+        for col, hdr, w in zip(cols, headers, [70, 120, 150, 280, 130]):
             self.tree.heading(col, text=hdr)
             self.tree.column(col, width=w)
         self.tree.pack(fill='both', expand=True, padx=12, pady=4)
@@ -57,13 +72,15 @@ class WebOrdersDashboard:
         # Action buttons
         btn_frame = tk.Frame(self.window, bg=COLOR_BG, pady=8)
         btn_frame.pack(fill='x', padx=12)
-        tk.Button(btn_frame, text="✅ Mark Ready for Pickup",
+        tk.Button(btn_frame, text=pos_locale.t("mark_ready"),
                   font=("Helvetica", 9, "bold"), bg=COLOR_GREEN, fg=COLOR_WHITE, relief='flat',
-                  padx=10, pady=6, command=lambda: self._advance_status("Ready for Pickup")).pack(side='left', padx=4)
-        tk.Button(btn_frame, text="🏁 Mark Completed",
+                  padx=10, pady=6,
+                  command=lambda: self._advance_status("Ready for Pickup")).pack(side='left', padx=4)
+        tk.Button(btn_frame, text=pos_locale.t("mark_completed"),
                   font=("Helvetica", 9, "bold"), bg=COLOR_RED, fg=COLOR_WHITE, relief='flat',
-                  padx=10, pady=6, command=lambda: self._advance_status("Completed")).pack(side='left', padx=4)
-        tk.Button(btn_frame, text="🔄 Refresh Now",
+                  padx=10, pady=6,
+                  command=lambda: self._advance_status("Completed")).pack(side='left', padx=4)
+        tk.Button(btn_frame, text=pos_locale.t("refresh_now"),
                   font=("Helvetica", 9), bg=COLOR_MUTED, fg=COLOR_WHITE, relief='flat',
                   padx=10, pady=6, command=self._refresh).pack(side='right', padx=4)
 
@@ -105,7 +122,7 @@ class WebOrdersDashboard:
                                          o['items'] or '', str(o['order_date'])[:16]),
                                  tags=(tag,))
         except Exception as e:
-            messagebox.showerror("DB Error", str(e))
+            messagebox.showerror(pos_locale.t("db_error"), str(e))
 
         # Schedule next auto-refresh
         self.window.after(POLL_INTERVAL, self._refresh)
@@ -113,7 +130,7 @@ class WebOrdersDashboard:
     def _advance_status(self, new_status: str):
         sel = self.tree.selection()
         if not sel:
-            messagebox.showwarning("No Selection", "Select an order first.")
+            messagebox.showwarning(pos_locale.t("no_selection"), pos_locale.t("select_order_first"))
             return
         order_id = int(sel[0])
         current_status = self.tree.item(sel[0])['values'][2]
@@ -202,11 +219,14 @@ class WebOrdersDashboard:
                 except Exception:
                     pass
 
-                messagebox.showinfo("Completed", f"Web Order #{order_id} picked up!\nTransaction #{transaction_id} saved.")
+                messagebox.showinfo(
+                    pos_locale.t("completed_title"),
+                    pos_locale.t("order_completed", id=order_id, tx=transaction_id)
+                )
                 self._refresh()
 
             except Exception as e:
-                messagebox.showerror("Checkout Error", str(e))
+                messagebox.showerror(pos_locale.t("checkout_error"), str(e))
         else:
             # Just advance status
             try:
@@ -220,4 +240,4 @@ class WebOrdersDashboard:
                 cur.close(); conn.close()
                 self._refresh()
             except Exception as e:
-                messagebox.showerror("Update Error", str(e))
+                messagebox.showerror(pos_locale.t("update_error"), str(e))

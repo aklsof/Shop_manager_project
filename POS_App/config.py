@@ -15,7 +15,7 @@ DB_CONFIG = {
     'port':     int(os.getenv('DB_PORT', '3306')),
 }
 
-APP_NAME = "AKLI Shopping Manager"
+APP_NAME = "AKLIShop"
 
 # Brand palette (Tkinter color codes)
 COLOR_RED    = "#C0392B"

@@ -5,15 +5,17 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Product } from '@/lib/types';
+import { useLang } from '@/lib/i18n';
 
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>(['All']);
+  const [categories, setCategories] = useState<string[]>([]);
   const [category, setCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<{ [id: number]: number }>({});
   const router = useRouter();
+  const { t } = useLang();
 
   // Load cart from sessionStorage
   useEffect(() => {
@@ -48,12 +50,17 @@ export default function HomePage() {
 
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
 
+  // Translate category label (only 'All' needs translation)
+  function catLabel(cat: string) {
+    return cat === 'All' ? t('cat_all') : cat;
+  }
+
   return (
     <>
       <Navbar />
       <div className="shop-hero">
-        <h1>AKLI Shopping Website</h1>
-        <p>Browse our products and place a pickup order</p>
+        <h1>{t('hero_title')}</h1>
+        <p>{t('hero_sub')}</p>
       </div>
 
       <div className="shop-container">
@@ -65,7 +72,7 @@ export default function HomePage() {
               className={`cat-tab${category === cat ? ' active' : ''}`}
               onClick={() => setCategory(cat)}
             >
-              {cat}
+              {catLabel(cat)}
             </button>
           ))}
         </div>
@@ -73,15 +80,15 @@ export default function HomePage() {
         {/* Cart banner */}
         {cartCount > 0 && (
           <div className="cart-banner" onClick={() => router.push('/cart')}>
-            🛒 {cartCount} item{cartCount > 1 ? 's' : ''} in cart — Click to checkout
+            🛒 {t('cart_banner', { n: cartCount })}
           </div>
         )}
 
         {/* Product grid */}
         {loading ? (
-          <div className="loading-spinner"><p>Loading products…</p></div>
+          <div className="loading-spinner"><p>{t('loading')}</p></div>
         ) : products.length === 0 ? (
-          <div className="empty-state">No products found in this category.</div>
+          <div className="empty-state">{t('no_products')}</div>
         ) : (
           <div className="product-grid">
             {products.map(product => (
@@ -104,9 +111,9 @@ export default function HomePage() {
                     ) : null}
                   </div>
                   <p className="stock-info">
-                    Stock: <strong>{product.total_stock ?? 0}</strong>
+                    {t('stock')}: <strong>{product.total_stock ?? 0}</strong>
                     {product.total_stock !== undefined && product.total_stock <= (product.min_stock_threshold || 0)
-                      ? <span className="low-stock-badge">Low</span>
+                      ? <span className="low-stock-badge">{t('low_stock')}</span>
                       : null}
                   </p>
                 </div>
@@ -115,7 +122,7 @@ export default function HomePage() {
                   onClick={() => addToCart(product)}
                   disabled={!product.total_stock || product.total_stock <= 0}
                 >
-                  {!product.total_stock || product.total_stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                  {!product.total_stock || product.total_stock <= 0 ? t('out_of_stock') : t('add_to_cart')}
                 </button>
               </div>
             ))}

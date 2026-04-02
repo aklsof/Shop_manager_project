@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CartItem, Product } from '@/lib/types';
+import { useLang } from '@/lib/i18n';
 
 export default function CartPage() {
   const router = useRouter();
+  const { t } = useLang();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,14 +64,14 @@ export default function CartPage() {
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 401) { router.push('/login'); return; }
-        setError(data.error || 'Failed to place order.');
+        setError(data.error || t('server_error'));
       } else {
         sessionStorage.removeItem('akli_cart');
         sessionStorage.removeItem('akli_cart_products');
         setCartItems([]);
-        setSuccess(`Order #${data.order_id} placed! We'll have it ready for pickup.`);
+        setSuccess(`${t('order_id')}${data.order_id} — ${t('place_order')} ✓`);
       }
-    } catch { setError('Server error.'); }
+    } catch { setError(t('server_error')); }
     finally { setLoading(false); }
   }
 
@@ -77,12 +79,12 @@ export default function CartPage() {
     <>
       <Navbar />
       <div className="shop-container">
-        <h1 className="page-title">Your Cart</h1>
+        <h1 className="page-title">{t('cart_title')}</h1>
         {success && <div className="alert alert-success">{success}</div>}
         {error && <div className="alert alert-danger">{error}</div>}
         {cartItems.length === 0 && !success ? (
           <div className="empty-state">
-            Your cart is empty. <a href="/">Browse products</a>
+            {t('cart_empty')} <a href="/">{t('nav_shop')}</a>
           </div>
         ) : (
           <>
@@ -100,10 +102,10 @@ export default function CartPage() {
               ))}
             </div>
             <div className="cart-total">
-              <strong>Total: {total.toFixed(2)} DA</strong>
+              <strong>{t('order_total')}: {total.toFixed(2)} DA</strong>
             </div>
             <button className="btn-checkout" onClick={handleCheckout} disabled={loading}>
-              {loading ? 'Placing order…' : '📦 Place Pickup Order'}
+              {loading ? t('placing_order') : `📦 ${t('place_order')}`}
             </button>
           </>
         )}
