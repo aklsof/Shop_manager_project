@@ -32,14 +32,23 @@ class LoginWindow:
     def _check_version(self):
         self.update_available = False
         try:
+            import urllib.request
             version_path = os.path.join(os.path.dirname(__file__), '..', 'version.txt')
-            remote_path = os.path.join(os.path.dirname(__file__), '..', 'remote_version.txt')
-            if os.path.exists(version_path) and os.path.exists(remote_path):
+            if os.path.exists(version_path):
                 with open(version_path, 'r') as f: local_v = f.read().strip()
-                with open(remote_path, 'r') as f: remote_v = f.read().strip()
-                if local_v and remote_v and local_v != remote_v:
-                    self.update_available = True
-        except Exception:
+                
+                # Fetch remote version from GitHub Raw URL
+                url = "https://raw.githubusercontent.com/aklsof/Updates/main/Aklishop_version.txt"
+                req = urllib.request.Request(url, headers={'Cache-Control': 'no-cache'})
+                with urllib.request.urlopen(req, timeout=3) as response:
+                    remote_v = response.read().decode('utf-8').strip()
+                if local_v and remote_v:
+                    def parse_v(v_str):
+                        return tuple(int(x) for x in v_str.replace('-', '.').split('.') if x.isdigit())
+                    if parse_v(remote_v) > parse_v(local_v):
+                        self.update_available = True
+        except Exception as e:
+            print(f"Version check failed: {e}")
             pass
 
 
@@ -228,8 +237,11 @@ class LoginWindow:
         tk.Button(win, text="Save Changes", bg=COLOR_RED, fg=COLOR_WHITE, font=("Helvetica", 10, "bold"), command=save).pack(pady=16)
 
     def _trigger_update(self):
-        messagebox.showinfo("Update", "Please run the AKLIShop Installer to apply the new update!")
+        import webbrowser
+        webbrowser.open("https://github.com/aklsof/Updates/blob/main/README.md")
+        messagebox.showinfo("Update", "Opening the update instructions in your browser.")
 
     def _show_error(self, msg):
         self.error_label.config(text=msg)
 
+ 
