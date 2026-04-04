@@ -118,7 +118,7 @@ export async function PATCH(req: NextRequest) {
 
         while (remainingToDeduct > 0) {
           const [lotRows] = await connection.query<RowDataPacket[]>(
-            'SELECT lot_id, quantity FROM vw_fifo_lot_queue WHERE product_id = ? LIMIT 1 FOR UPDATE',
+            'SELECT lot_id, remaining_quantity FROM vw_fifo_lot_queue WHERE product_id = ? LIMIT 1 FOR UPDATE',
             [item.product_id]
           );
 
