@@ -20,7 +20,7 @@ class LoginWindow:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title(pos_locale.t("app_title"))
-        self.root.geometry("420x400") # slightly taller for new buttons
+        self.root.geometry("420x450") # slightly taller for new message and link
         self.root.resizable(False, False)
         self.root.configure(bg=COLOR_BG)
         self.logged_in_user = None
@@ -109,6 +109,16 @@ class LoginWindow:
                               padx=24, pady=8, command=self._open_registration)
         register_btn.pack(fill='x')
 
+        # Client account creation hint
+        hint_frame = tk.Frame(btn_frame, bg=COLOR_WHITE)
+        hint_frame.pack(fill='x', pady=(12, 0))
+        tk.Label(hint_frame, text=pos_locale.t("client_account_hint"), font=("Helvetica", 8),
+                 bg=COLOR_WHITE, fg=COLOR_MUTED).pack()
+        link_lbl = tk.Label(hint_frame, text="https://aklishop.netlify.app/", font=("Helvetica", 8, "underline"),
+                           bg=COLOR_WHITE, fg=COLOR_RED, cursor="hand2")
+        link_lbl.pack()
+        link_lbl.bind("<Button-1>", lambda e: self._open_url("https://aklishop.netlify.app/"))
+
         if getattr(self, 'update_available', False):
             update_btn = tk.Button(btn_frame, text="Update Available!", font=("Helvetica", 10, "bold"),
                                    bg=COLOR_GREEN, fg=COLOR_WHITE, relief='flat', cursor='hand2',
@@ -116,6 +126,10 @@ class LoginWindow:
             update_btn.pack(fill='x', pady=(8, 0))
 
         self.root.bind('<Return>', lambda e: self._handle_login())
+
+    def _open_url(self, url):
+        import webbrowser
+        webbrowser.open(url)
 
     def _handle_login(self):
         username = self.username_var.get().strip()

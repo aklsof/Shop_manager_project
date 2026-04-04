@@ -34,6 +34,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "invalid_credentials":          {"en": "Invalid username or password.",          "fr": "Nom d'utilisateur ou mot de passe invalide.", "ar": "اسم المستخدم أو كلمة المرور غير صحيحة."},
     "account_deactivated":          {"en": "Account is deactivated. Contact administrator.", "fr": "Compte désactivé. Contactez un administrateur.", "ar": "الحساب معطّل. تواصل مع المسؤول."},
     "db_error":                     {"en": "Database error",        "fr": "Erreur de base de données",     "ar": "خطأ في قاعدة البيانات"},
+    "client_account_hint":          {"en": "Create client account at:", "fr": "Créer un compte client sur :", "ar": "أنشئ حساب عميل على:"},
 
     # ── Sales window ─────────────────────────────────────────────────────
     "sales_title":                  {"en": "Sales",                 "fr": "Ventes",                        "ar": "المبيعات"},
