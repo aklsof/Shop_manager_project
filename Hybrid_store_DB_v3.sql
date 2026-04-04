@@ -20,8 +20,6 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 SET FOREIGN_KEY_CHECKS = 0;
-CREATE DATABASE IF NOT EXISTS `hybrid_store`;
-USE `hybrid_store`;
 DROP TABLE IF EXISTS `inventory_adjustments`, `inventory_lots`, `price_rules`, `products`, `tax_categories`, `transactions`, `transaction_items`, `users`, `web_orders`, `web_order_items`;
 
 --

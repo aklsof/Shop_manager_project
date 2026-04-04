@@ -139,7 +139,19 @@ class WebOrdersDashboard:
             # Execute checkout flow for web order
             try:
                 conn = get_connection()
+                conn.start_transaction()
                 cur = conn.cursor(dictionary=True)
+
+                # Replaced trg_order_status_workflow
+                cur.execute("SELECT status FROM web_orders WHERE order_id = %s FOR UPDATE", (order_id,))
+                order_row = cur.fetchone()
+                if not order_row:
+                    raise Exception("Order not found.")
+                db_status = order_row['status']
+                if not ((db_status == 'Pending' and new_status == 'Ready for Pickup') or 
+                        (db_status == 'Ready for Pickup' and new_status == 'Completed')):
+                    if db_status != new_status:
+                        raise Exception("Invalid order status transition. Allowed: Pending→Ready for Pickup→Completed.")
 
                 # Get items
                 cur.execute(
@@ -159,10 +171,15 @@ class WebOrdersDashboard:
                     for i in items
                 )
 
+                # Fetch receipt_language for pos_user or fallback to en
+                cur.execute("SELECT preferred_lang FROM users WHERE user_id = %s", (self.user['user_id'],))
+                u_row = cur.fetchone()
+                receipt_lang = u_row['preferred_lang'] if u_row and u_row['preferred_lang'] else 'en'
+
                 # Create transaction
                 cur.execute(
-                    "INSERT INTO transactions (user_id, is_refund, total_amount) VALUES (%s, %s, %s)",
-                    (self.user['user_id'], 0, total_amount)
+                    "INSERT INTO transactions (user_id, is_refund, total_amount, receipt_language) VALUES (%s, %s, %s, %s)",
+                    (self.user['user_id'], 0, total_amount, receipt_lang)
                 )
                 transaction_id = cur.lastrowid
 
@@ -191,6 +208,11 @@ class WebOrdersDashboard:
                     )
 
                     if lot_id:
+                        cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))
+                        lot_row = cur.fetchone()
+                        if not lot_row or lot_row['quantity'] < qty:
+                            raise Exception("Insufficient stock in the selected lot for this sale.")
+                        
                         cur.execute(
                             "UPDATE inventory_lots SET quantity = quantity - %s WHERE lot_id = %s",
                             (qty, lot_id)
@@ -226,12 +248,26 @@ class WebOrdersDashboard:
                 self._refresh()
 
             except Exception as e:
+                if 'conn' in locals() and conn.is_connected(): conn.rollback()
                 messagebox.showerror(pos_locale.t("checkout_error"), str(e))
         else:
             # Just advance status
             try:
                 conn = get_connection()
-                cur = conn.cursor()
+                conn.start_transaction()
+                cur = conn.cursor(dictionary=True)
+                
+                cur.execute("SELECT status FROM web_orders WHERE order_id = %s FOR UPDATE", (order_id,))
+                order_row = cur.fetchone()
+                if not order_row:
+                    raise Exception("Order not found.")
+                db_status = order_row['status']
+                
+                if not ((db_status == 'Pending' and new_status == 'Ready for Pickup') or 
+                        (db_status == 'Ready for Pickup' and new_status == 'Completed')):
+                    if db_status != new_status:
+                        raise Exception("Invalid order status transition. Allowed: Pending→Ready for Pickup→Completed.")
+
                 cur.execute(
                     "UPDATE web_orders SET status = %s, handled_by = %s WHERE order_id = %s",
                     (new_status, self.user['user_id'], order_id)
@@ -240,4 +276,5 @@ class WebOrdersDashboard:
                 cur.close(); conn.close()
                 self._refresh()
             except Exception as e:
+                if 'conn' in locals() and conn.is_connected(): conn.rollback()
                 messagebox.showerror(pos_locale.t("update_error"), str(e))

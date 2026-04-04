@@ -23,6 +23,18 @@ export async function POST(req: NextRequest) {
     if (!validTypes.includes(rule_type)) {
       return NextResponse.json({ error: 'Invalid rule_type.' }, { status: 400 });
     }
+    
+    // Replaces trg_validate_price_rule
+    const [overlap]: any = await pool.query(
+      `SELECT COUNT(*) as conflict FROM price_rules 
+       WHERE product_id = ? AND rule_type = ? AND is_active = 1 
+       AND ? < end_date AND ? > start_date`,
+       [product_id, rule_type, start_date, end_date]
+    );
+    if (overlap && overlap.length > 0 && overlap[0].conflict > 0) {
+      return NextResponse.json({ error: 'An overlapping active price rule of this type already exists for this product.' }, { status: 400 });
+    }
+
     const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO price_rules (product_id, rule_type, promotional_price, start_date, end_date) VALUES (?, ?, ?, ?, ?)',
       [product_id, rule_type, promotional_price, start_date, end_date]

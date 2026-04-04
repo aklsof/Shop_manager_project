@@ -15,6 +15,18 @@ DB_CONFIG = {
     'port':     int(os.getenv('DB_PORT', '3306')),
 }
 
+if os.getenv('DB_SSL', 'false').lower() == 'true':
+    ca_path_env = os.getenv('DB_SSL_CA', '')
+    ca_path_default = os.path.join(os.path.dirname(__file__), 'ca.pem')
+    
+    if ca_path_env and os.path.exists(ca_path_env):
+        DB_CONFIG['ssl_ca'] = ca_path_env
+    elif os.path.exists(ca_path_default):
+        DB_CONFIG['ssl_ca'] = ca_path_default
+    else:
+        DB_CONFIG['ssl_verify_cert'] = True
+        DB_CONFIG['ssl_verify_identity'] = True
+
 APP_NAME = "AKLIShop"
 
 # Brand palette (Tkinter color codes)

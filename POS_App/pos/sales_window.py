@@ -276,19 +276,30 @@ class SalesWindow:
 
         try:
             conn = get_connection()
+            conn.start_transaction()
             cur = conn.cursor(dictionary=True)
 
+            # Replaced trg_prevent_inactive_user_login & trg_default_receipt_language
+            cur.execute("SELECT is_active, preferred_lang FROM users WHERE user_id = %s", (self.user['user_id'],))
+            user_row = cur.fetchone()
+            if not user_row or not user_row['is_active']:
+                raise Exception("Transaction rejected: the associated user account is inactive.")
+            receipt_lang = user_row['preferred_lang'] or 'en'
+
             # Calculate total amount
-            total_amount = sum(
+            total_amount = abs(sum(
                 (item['unit_price'] * abs(item['quantity'])) * (1 + item['tax_rate'] / 100)
-                * (1 if item['quantity'] > 0 else -1)
                 for item in self.cart
-            )
+            ))
+
+            # Replaced trg_transaction_total_verify
+            if total_amount <= 0:
+                raise Exception("Transaction total_amount must be greater than zero.")
 
             # Insert transaction
             cur.execute(
-                "INSERT INTO transactions (user_id, is_refund, total_amount) VALUES (%s, %s, %s)",
-                (self.user['user_id'], 1 if self.refund_mode else 0, total_amount)
+                "INSERT INTO transactions (user_id, total_amount, is_refund, receipt_language) VALUES (%s, %s, %s, %s)",
+                (self.user['user_id'], total_amount, 1 if self.refund_mode else 0, receipt_lang)
             )
             transaction_id = cur.lastrowid
 
@@ -316,10 +327,30 @@ class SalesWindow:
                     (transaction_id, item['product_id'], lot_id, qty, unit_price, tax_amount)
                 )
 
-                if lot_id:
+                # Replaced trg_sale_deduct_stock
+                if qty > 0 and lot_id:
+                    cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))
+                    lot_row = cur.fetchone()
+                    if not lot_row or lot_row['quantity'] < qty:
+                        raise Exception("Insufficient stock in the selected lot for this sale.")
+                    
                     cur.execute(
                         "UPDATE inventory_lots SET quantity = quantity - %s WHERE lot_id = %s",
                         (qty, lot_id)
+                    )
+                
+                # Replaced trg_refund_create_lot
+                if qty < 0:
+                    buying_price = 0
+                    if lot_id:
+                        cur.execute("SELECT buying_price FROM inventory_lots WHERE lot_id = %s", (lot_id,))
+                        bp_row = cur.fetchone()
+                        if bp_row:
+                            buying_price = bp_row['buying_price']
+                            
+                    cur.execute(
+                        "INSERT INTO inventory_lots (product_id, quantity, buying_price) VALUES (%s, %s, %s)",
+                        (item['product_id'], abs(qty), buying_price)
                     )
 
                 receipt_items.append({
@@ -329,7 +360,8 @@ class SalesWindow:
                 })
 
             conn.commit()
-            cur.close(); conn.close()
+            cur.close()
+            conn.close()
 
             # Generate receipt
             pdf_path = generate_receipt(transaction_id, self.user['username'], receipt_items)

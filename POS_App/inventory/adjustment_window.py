@@ -117,16 +117,36 @@ class AdjustmentWindow:
         lot_id = self.lots[sel]['lot_id']
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            conn.start_transaction()
+            cur = conn.cursor(dictionary=True)
+            
+            # Replaced Trigger Logic: ensure non-negative result
+            cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))
+            lot_row = cur.fetchone()
+            if not lot_row:
+                raise Exception("Lot not found.")
+                
+            current_qty = lot_row['quantity']
+            if current_qty + qty < 0:
+                raise Exception("Adjustment would result in negative lot quantity. Operation aborted.")
+                
+            cur.execute(
+                "UPDATE inventory_lots SET quantity = quantity + %s WHERE lot_id = %s",
+                (qty, lot_id)
+            )
+
             cur.execute(
                 "INSERT INTO inventory_adjustments (lot_id, user_id, quantity_adjusted, reason) VALUES (%s, %s, %s, %s)",
                 (lot_id, self.user['user_id'], qty, reason or None)
             )
             conn.commit()
-            cur.close(); conn.close()
+            cur.close()
+            conn.close()
             messagebox.showinfo("Saved", "Adjustment recorded successfully.")
             self.qty_var.set('')
             self.reason_var.set('')
             self._load_lots()
         except Exception as e:
+            if 'conn' in locals() and conn.is_connected():
+                conn.rollback()
             self.error_label.config(text=str(e))
