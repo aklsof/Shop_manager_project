@@ -34,6 +34,17 @@ CREATE TABLE IF NOT EXISTS `tax_categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
+-- product_categories  (no FK dependencies)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `product_categories` (
+  `category_id` int(11)      NOT NULL AUTO_INCREMENT,
+  `name`        varchar(100) NOT NULL,
+  `created_at`  timestamp    NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`category_id`),
+  UNIQUE KEY `uq_category_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
 -- users  (no FK dependencies)
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `users` (

@@ -11,7 +11,7 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 2, // reduced to 2 to fit within the 5 connection limit of filess.io
   queueLimit: 0,
   ...(process.env.DB_SSL === 'true' && {
     ssl: {

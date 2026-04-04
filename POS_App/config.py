@@ -13,6 +13,7 @@ DB_CONFIG = {
     'user':     os.getenv('DB_USER', 'root'),
     'password': os.getenv('DB_PASSWORD', ''),
     'port':     int(os.getenv('DB_PORT', '3306')),
+    'collation': 'utf8mb4_general_ci',
 }
 
 if os.getenv('DB_SSL', 'false').lower() == 'true':

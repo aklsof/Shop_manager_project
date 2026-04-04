@@ -136,7 +136,7 @@ class RegistrationWindow:
                 "(username, email, user_firstName, user_lastName, password_hash, role, user_type, preferred_lang) "
                 "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                 (data['username'], data['email'], data['firstName'], data['lastName'],
-                 pw_hash, 'Administrator', 'admin', preferred_lang)
+                 pw_hash, 'Administrator', 'staff', preferred_lang)
             )
             conn.commit()
             cursor.close()
