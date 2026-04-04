@@ -35,6 +35,8 @@ export default function AdminDashboard() {
   }, [router]);
 
   const adminLinks = [
+    { href: '/admin/pos', label: '💻 POS Terminal', desc: 'Process local sales & checkout' },
+    { href: '/admin/orders', label: '🌐 Web Orders', desc: 'Ready pickups & complete orders' },
     { href: '/admin/products', label: '📦 Products', desc: 'Add & manage products' },
     { href: '/admin/categories', label: '🗂️ Categories', desc: 'Manage product categories' },
     { href: '/admin/stock', label: '📥 Stock', desc: 'Receive new inventory' },

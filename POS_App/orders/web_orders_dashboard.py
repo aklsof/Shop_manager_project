@@ -89,7 +89,7 @@ class WebOrdersDashboard:
             return
         try:
             conn = get_connection()
-            cur = conn.cursor(dictionary=True)
+            cur = conn.cursor()
             status_filter = self.status_var.get()
             if status_filter == "All":
                 cur.execute(
@@ -248,7 +248,7 @@ class WebOrdersDashboard:
                 self._refresh()
 
             except Exception as e:
-                if 'conn' in locals() and conn.is_connected(): conn.rollback()
+                if 'conn' in locals(): conn.rollback()
                 messagebox.showerror(pos_locale.t("checkout_error"), str(e))
         else:
             # Just advance status
@@ -276,5 +276,5 @@ class WebOrdersDashboard:
                 cur.close(); conn.close()
                 self._refresh()
             except Exception as e:
-                if 'conn' in locals() and conn.is_connected(): conn.rollback()
+                if 'conn' in locals(): conn.rollback()
                 messagebox.showerror(pos_locale.t("update_error"), str(e))

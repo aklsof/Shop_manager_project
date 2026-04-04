@@ -147,6 +147,6 @@ class AdjustmentWindow:
             self.reason_var.set('')
             self._load_lots()
         except Exception as e:
-            if 'conn' in locals() and conn.is_connected():
+            if 'conn' in locals():
                 conn.rollback()
             self.error_label.config(text=str(e))
