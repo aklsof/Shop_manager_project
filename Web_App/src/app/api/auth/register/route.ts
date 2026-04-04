@@ -47,9 +47,9 @@ export async function POST(req: NextRequest) {
 
     await pool.query(
       `INSERT INTO users 
-        (username, email, user_firstName, user_lastName, user_address1, city, province, password_hash, preferred_lang,role)
+        (username, email, user_firstName, user_lastName, user_address1, city, province, password_hash, preferred_lang, role, user_type)
        VALUES 
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Store Associate')`,
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'client')`,
       [username, email, user_firstName, user_lastName, user_address1, city, province, hashedPassword, preferred_lang]
     );
 
