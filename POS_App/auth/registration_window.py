@@ -118,29 +118,30 @@ class RegistrationWindow:
 
         try:
             conn = get_connection()
-            cursor = conn.cursor()
+            try:
+                cursor = conn.cursor()
 
-            # Check if username or email exists
-            cursor.execute("SELECT user_id FROM users WHERE username = %s OR email = %s",
-                           (data['username'], data['email']))
-            if cursor.fetchone():
-                self._show_error(pos_locale.t("username_email_exists"))
+                # Check if username or email exists
+                cursor.execute("SELECT user_id FROM users WHERE username = %s OR email = %s",
+                               (data['username'], data['email']))
+                if cursor.fetchone():
+                    self._show_error(pos_locale.t("username_email_exists"))
+                    cursor.close()
+                    return
+
+                pw_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+                cursor.execute(
+                    "INSERT INTO users "
+                    "(username, email, user_firstName, user_lastName, password_hash, role, user_type, preferred_lang) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    (data['username'], data['email'], data['firstName'], data['lastName'],
+                     pw_hash, 'Administrator', 'staff', preferred_lang)
+                )
+                conn.commit()
                 cursor.close()
+            finally:
                 conn.close()
-                return
-
-            pw_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-            cursor.execute(
-                "INSERT INTO users "
-                "(username, email, user_firstName, user_lastName, password_hash, role, user_type, preferred_lang) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (data['username'], data['email'], data['firstName'], data['lastName'],
-                 pw_hash, 'Administrator', 'staff', preferred_lang)
-            )
-            conn.commit()
-            cursor.close()
-            conn.close()
 
             messagebox.showinfo(pos_locale.t("success"), pos_locale.t("registration_success"))
             self.window.destroy()

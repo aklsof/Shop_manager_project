@@ -14,6 +14,7 @@ from config import APP_NAME, COLOR_RED, COLOR_RED_DK, COLOR_GREEN, COLOR_WHITE, 
 from db import get_connection
 from auth.registration_window import RegistrationWindow
 import pos_locale   # our translation module
+import cache_manager
 
 
 class LoginWindow:
@@ -140,16 +141,25 @@ class LoginWindow:
             return
 
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT user_id, username, password_hash, role, user_type, preferred_lang, is_active "
-                "FROM users WHERE username = %s",
-                (username,)
-            )
-            user = cursor.fetchone()
-            cursor.close()
-            conn.close()
+            # 1. Try Cache First (Fast and saves connections)
+            all_users = cache_manager.get_table('users')
+            user = next((u for u in all_users if u['username'] == username), None)
+            
+            if not user:
+                # 2. Fallback to SQL (Only if user is new and not in JSON yet)
+                print("[LOGIN] Cache miss for user. Trying SQL fallback...")
+                conn = get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "SELECT user_id, username, password_hash, role, user_type, preferred_lang, is_active "
+                        "FROM users WHERE username = %s",
+                        (username,)
+                    )
+                    user = cursor.fetchone()
+                    cursor.close()
+                finally:
+                    conn.close()
 
             if not user:
                 self._show_error(pos_locale.t("invalid_credentials"))

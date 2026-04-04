@@ -66,12 +66,15 @@ class AdjustmentWindow:
     def _load_lots(self):
         try:
             conn = get_connection()
-            cur = conn.cursor()
-            cur.execute("""SELECT il.lot_id, p.name AS product_name, il.quantity, il.date_received
-                           FROM inventory_lots il JOIN products p ON p.product_id = il.product_id
-                           WHERE il.quantity > 0 ORDER BY il.date_received DESC""")
-            self.lots = cur.fetchall()
-            cur.close(); conn.close()
+            try:
+                cur = conn.cursor()
+                cur.execute("""SELECT il.lot_id, p.name AS product_name, il.quantity, il.date_received
+                               FROM inventory_lots il JOIN products p ON p.product_id = il.product_id
+                               WHERE il.quantity > 0 ORDER BY il.date_received DESC""")
+                self.lots = cur.fetchall()
+                cur.close()
+            finally:
+                conn.close()
             self.lot_combo['values'] = [f"Lot #{l['lot_id']} — {l['product_name']} (qty: {l['quantity']})" for l in self.lots]
             self._load_log()
         except Exception as e:
@@ -80,10 +83,13 @@ class AdjustmentWindow:
     def _load_log(self):
         try:
             conn = get_connection()
-            cur = conn.cursor()
-            cur.execute("SELECT * FROM vw_inventory_adjustment_log ORDER BY adjustment_date DESC LIMIT 30")
-            rows = cur.fetchall()
-            cur.close(); conn.close()
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM vw_inventory_adjustment_log ORDER BY adjustment_date DESC LIMIT 30")
+                rows = cur.fetchall()
+                cur.close()
+            finally:
+                conn.close()
             self.tree.delete(*self.tree.get_children())
             for r in rows:
                 self.tree.insert('', 'end', values=(
@@ -117,31 +123,33 @@ class AdjustmentWindow:
         lot_id = self.lots[sel]['lot_id']
         try:
             conn = get_connection()
-            conn.begin()
-            cur = conn.cursor()
-            
-            # Replaced Trigger Logic: ensure non-negative result
-            cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))
-            lot_row = cur.fetchone()
-            if not lot_row:
-                raise Exception("Lot not found.")
+            try:
+                conn.begin()
+                cur = conn.cursor()
                 
-            current_qty = lot_row['quantity']
-            if current_qty + qty < 0:
-                raise Exception("Adjustment would result in negative lot quantity. Operation aborted.")
-                
-            cur.execute(
-                "UPDATE inventory_lots SET quantity = quantity + %s WHERE lot_id = %s",
-                (qty, lot_id)
-            )
+                # Replaced Trigger Logic: ensure non-negative result
+                cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))
+                lot_row = cur.fetchone()
+                if not lot_row:
+                    raise Exception("Lot not found.")
+                    
+                current_qty = lot_row['quantity']
+                if current_qty + qty < 0:
+                    raise Exception("Adjustment would result in negative lot quantity. Operation aborted.")
+                    
+                cur.execute(
+                    "UPDATE inventory_lots SET quantity = quantity + %s WHERE lot_id = %s",
+                    (qty, lot_id)
+                )
 
-            cur.execute(
-                "INSERT INTO inventory_adjustments (lot_id, user_id, quantity_adjusted, reason) VALUES (%s, %s, %s, %s)",
-                (lot_id, self.user['user_id'], qty, reason or None)
-            )
-            conn.commit()
-            cur.close()
-            conn.close()
+                cur.execute(
+                    "INSERT INTO inventory_adjustments (lot_id, user_id, quantity_adjusted, reason) VALUES (%s, %s, %s, %s)",
+                    (lot_id, self.user['user_id'], qty, reason or None)
+                )
+                conn.commit()
+                cur.close()
+            finally:
+                conn.close()
             messagebox.showinfo("Saved", "Adjustment recorded successfully.")
             self.qty_var.set('')
             self.reason_var.set('')

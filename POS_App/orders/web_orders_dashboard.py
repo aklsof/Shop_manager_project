@@ -89,30 +89,33 @@ class WebOrdersDashboard:
             return
         try:
             conn = get_connection()
-            cur = conn.cursor()
-            status_filter = self.status_var.get()
-            if status_filter == "All":
-                cur.execute(
-                    """SELECT order_id, client_username, status,
-                              GROUP_CONCAT(CONCAT(product_name, ' x', quantity) SEPARATOR ', ') AS items,
-                              order_date
-                       FROM vw_web_orders_dashboard
-                       GROUP BY order_id, client_username, status, order_date
-                       ORDER BY order_date DESC"""
-                )
-            else:
-                cur.execute(
-                    """SELECT order_id, client_username, status,
-                              GROUP_CONCAT(CONCAT(product_name, ' x', quantity) SEPARATOR ', ') AS items,
-                              order_date
-                       FROM vw_web_orders_dashboard
-                       WHERE status = %s
-                       GROUP BY order_id, client_username, status, order_date
-                       ORDER BY order_date DESC""",
-                    (status_filter,)
-                )
-            orders = cur.fetchall()
-            cur.close(); conn.close()
+            try:
+                cur = conn.cursor()
+                status_filter = self.status_var.get()
+                if status_filter == "All":
+                    cur.execute(
+                        """SELECT order_id, client_username, status,
+                                   GROUP_CONCAT(CONCAT(product_name, ' x', quantity) SEPARATOR ', ') AS items,
+                                   order_date
+                           FROM vw_web_orders_dashboard
+                           GROUP BY order_id, client_username, status, order_date
+                           ORDER BY order_date DESC"""
+                    )
+                else:
+                    cur.execute(
+                        """SELECT order_id, client_username, status,
+                                   GROUP_CONCAT(CONCAT(product_name, ' x', quantity) SEPARATOR ', ') AS items,
+                                   order_date
+                           FROM vw_web_orders_dashboard
+                           WHERE status = %s
+                           GROUP BY order_id, client_username, status, order_date
+                           ORDER BY order_date DESC""",
+                        (status_filter,)
+                    )
+                orders = cur.fetchall()
+                cur.close()
+            finally:
+                conn.close()
 
             self.tree.delete(*self.tree.get_children())
             for o in orders:
@@ -139,99 +142,105 @@ class WebOrdersDashboard:
             # Execute checkout flow for web order
             try:
                 conn = get_connection()
-                conn.begin()
-                cur = conn.cursor()
+                try:
+                    conn.begin()
+                    cur = conn.cursor()
 
-                # Replaced trg_order_status_workflow
-                cur.execute("SELECT status FROM web_orders WHERE order_id = %s FOR UPDATE", (order_id,))
-                order_row = cur.fetchone()
-                if not order_row:
-                    raise Exception("Order not found.")
-                db_status = order_row['status']
-                if not ((db_status == 'Pending' and new_status == 'Ready for Pickup') or 
-                        (db_status == 'Ready for Pickup' and new_status == 'Completed')):
-                    if db_status != new_status:
-                        raise Exception("Invalid order status transition. Allowed: Pending→Ready for Pickup→Completed.")
+                    # Replaced trg_order_status_workflow
+                    cur.execute("SELECT status FROM web_orders WHERE order_id = %s FOR UPDATE", (order_id,))
+                    order_row = cur.fetchone()
+                    if not order_row:
+                        raise Exception("Order not found.")
+                    db_status = order_row['status']
+                    if not ((db_status == 'Pending' and new_status == 'Ready for Pickup') or 
+                            (db_status == 'Ready for Pickup' and new_status == 'Completed')):
+                        if db_status != new_status:
+                            raise Exception("Invalid order status transition. Allowed: Pending→Ready for Pickup→Completed.")
 
-                # Get items
-                cur.execute(
-                    """SELECT woi.product_id, woi.quantity, woi.price_at_order,
-                              p.name, t.rate AS tax_rate
-                       FROM web_order_items woi
-                       JOIN products p ON p.product_id = woi.product_id
-                       JOIN tax_categories t ON t.tax_category_id = p.tax_category_id
-                       WHERE woi.order_id = %s""",
-                    (order_id,)
-                )
-                items = cur.fetchall()
-
-                # Calculate total
-                total_amount = sum(
-                    (float(i['price_at_order']) * i['quantity']) * (1 + float(i['tax_rate']) / 100)
-                    for i in items
-                )
-
-                # Fetch receipt_language for pos_user or fallback to en
-                cur.execute("SELECT preferred_lang FROM users WHERE user_id = %s", (self.user['user_id'],))
-                u_row = cur.fetchone()
-                receipt_lang = u_row['preferred_lang'] if u_row and u_row['preferred_lang'] else 'en'
-
-                # Create transaction
-                cur.execute(
-                    "INSERT INTO transactions (user_id, is_refund, total_amount, receipt_language) VALUES (%s, %s, %s, %s)",
-                    (self.user['user_id'], 0, total_amount, receipt_lang)
-                )
-                transaction_id = cur.lastrowid
-
-                receipt_items = []
-                for item in items:
-                    qty = item['quantity']
-                    unit_price = float(item['price_at_order'])
-                    tax_rate = float(item['tax_rate'])
-                    line_total = unit_price * qty
-                    tax_amount = line_total * tax_rate / 100
-
-                    # FIFO lot
+                    # Get items
                     cur.execute(
-                        """SELECT lot_id FROM vw_fifo_lot_queue
-                           WHERE product_id = %s LIMIT 1""",
-                        (item['product_id'],)
+                        """SELECT woi.product_id, woi.quantity, woi.price_at_order,
+                                  p.name, t.rate AS tax_rate
+                           FROM web_order_items woi
+                           JOIN products p ON p.product_id = woi.product_id
+                           JOIN tax_categories t ON t.tax_category_id = p.tax_category_id
+                           WHERE woi.order_id = %s""",
+                        (order_id,)
                     )
-                    lot = cur.fetchone()
-                    lot_id = lot['lot_id'] if lot else None
+                    items = cur.fetchall()
 
-                    cur.execute(
-                        """INSERT INTO transaction_items
-                           (transaction_id, product_id, lot_id, quantity, price_applied, tax_applied)
-                           VALUES (%s, %s, %s, %s, %s, %s)""",
-                        (transaction_id, item['product_id'], lot_id, qty, unit_price, tax_amount)
+                    # Calculate total
+                    total_amount = sum(
+                        (float(i['price_at_order']) * i['quantity']) * (1 + float(i['tax_rate']) / 100)
+                        for i in items
                     )
 
-                    if lot_id:
-                        cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))
-                        lot_row = cur.fetchone()
-                        if not lot_row or lot_row['quantity'] < qty:
-                            raise Exception("Insufficient stock in the selected lot for this sale.")
-                        
+                    # Fetch receipt_language for pos_user or fallback to en
+                    cur.execute("SELECT preferred_lang FROM users WHERE user_id = %s", (self.user['user_id'],))
+                    u_row = cur.fetchone()
+                    receipt_lang = u_row['preferred_lang'] if u_row and u_row['preferred_lang'] else 'en'
+
+                    # Create transaction
+                    cur.execute(
+                        "INSERT INTO transactions (user_id, is_refund, total_amount, receipt_language) VALUES (%s, %s, %s, %s)",
+                        (self.user['user_id'], 0, total_amount, receipt_lang)
+                    )
+                    transaction_id = cur.lastrowid
+
+                    receipt_items = []
+                    for item in items:
+                        qty = item['quantity']
+                        unit_price = float(item['price_at_order'])
+                        tax_rate = float(item['tax_rate'])
+                        line_total = unit_price * qty
+                        tax_amount = line_total * tax_rate / 100
+
+                        # FIFO lot
                         cur.execute(
-                            "UPDATE inventory_lots SET quantity = quantity - %s WHERE lot_id = %s",
-                            (qty, lot_id)
+                            """SELECT lot_id FROM vw_fifo_lot_queue
+                               WHERE product_id = %s LIMIT 1""",
+                            (item['product_id'],)
+                        )
+                        lot = cur.fetchone()
+                        lot_id = lot['lot_id'] if lot else None
+
+                        cur.execute(
+                            """INSERT INTO transaction_items
+                               (transaction_id, product_id, lot_id, quantity, price_applied, tax_applied)
+                               VALUES (%s, %s, %s, %s, %s, %s)""",
+                            (transaction_id, item['product_id'], lot_id, qty, unit_price, tax_amount)
                         )
 
-                    receipt_items.append({
-                        'name': item['name'], 'quantity': qty,
-                        'unit_price': unit_price, 'tax_rate': tax_rate,
-                        'line_total': line_total, 'tax_amount': tax_amount,
-                    })
+                        if lot_id:
+                            cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))
+                            lot_row = cur.fetchone()
+                            if not lot_row or lot_row['quantity'] < qty:
+                                raise Exception("Insufficient stock in the selected lot for this sale.")
+                            
+                            cur.execute(
+                                "UPDATE inventory_lots SET quantity = quantity - %s WHERE lot_id = %s",
+                                (qty, lot_id)
+                            )
 
-                # Mark order completed
-                cur.execute(
-                    "UPDATE web_orders SET status = %s, handled_by = %s WHERE order_id = %s",
-                    (new_status, self.user['user_id'], order_id)
-                )
+                        receipt_items.append({
+                            'name': item['name'], 'quantity': qty,
+                            'unit_price': unit_price, 'tax_rate': tax_rate,
+                            'line_total': line_total, 'tax_amount': tax_amount,
+                        })
 
-                conn.commit()
-                cur.close(); conn.close()
+                    # Mark order completed
+                    cur.execute(
+                        "UPDATE web_orders SET status = %s, handled_by = %s WHERE order_id = %s",
+                        (new_status, self.user['user_id'], order_id)
+                    )
+
+                    conn.commit()
+                    cur.close()
+                except Exception as e:
+                    conn.rollback()
+                    raise e
+                finally:
+                    conn.close()
 
                 # Print receipt
                 from pos.receipt import generate_receipt
@@ -254,26 +263,29 @@ class WebOrdersDashboard:
             # Just advance status
             try:
                 conn = get_connection()
-                conn.begin()
-                cur = conn.cursor()
-                
-                cur.execute("SELECT status FROM web_orders WHERE order_id = %s FOR UPDATE", (order_id,))
-                order_row = cur.fetchone()
-                if not order_row:
-                    raise Exception("Order not found.")
-                db_status = order_row['status']
-                
-                if not ((db_status == 'Pending' and new_status == 'Ready for Pickup') or 
-                        (db_status == 'Ready for Pickup' and new_status == 'Completed')):
-                    if db_status != new_status:
-                        raise Exception("Invalid order status transition. Allowed: Pending→Ready for Pickup→Completed.")
+                try:
+                    conn.begin()
+                    cur = conn.cursor()
+                    
+                    cur.execute("SELECT status FROM web_orders WHERE order_id = %s FOR UPDATE", (order_id,))
+                    order_row = cur.fetchone()
+                    if not order_row:
+                        raise Exception("Order not found.")
+                    db_status = order_row['status']
+                    
+                    if not ((db_status == 'Pending' and new_status == 'Ready for Pickup') or 
+                            (db_status == 'Ready for Pickup' and new_status == 'Completed')):
+                        if db_status != new_status:
+                            raise Exception("Invalid order status transition. Allowed: Pending→Ready for Pickup→Completed.")
 
-                cur.execute(
-                    "UPDATE web_orders SET status = %s, handled_by = %s WHERE order_id = %s",
-                    (new_status, self.user['user_id'], order_id)
-                )
-                conn.commit()
-                cur.close(); conn.close()
+                    cur.execute(
+                        "UPDATE web_orders SET status = %s, handled_by = %s WHERE order_id = %s",
+                        (new_status, self.user['user_id'], order_id)
+                    )
+                    conn.commit()
+                    cur.close()
+                finally:
+                    conn.close()
                 self._refresh()
             except Exception as e:
                 if 'conn' in locals(): conn.rollback()

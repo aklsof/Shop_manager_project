@@ -48,7 +48,25 @@ export default function POSTerminalPage() {
   }
 
   function removeFromCart(productId: number) {
-    setCart(cart.filter(i => i.product_id !== productId).map(i => i.product_id === productId ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0));
+    setCart(cart.filter(i => i.product_id !== productId));
+  }
+
+  function updateCartQuantity(productId: number, newQty: number) {
+    const product = products.find(p => p.product_id === productId);
+    if (!product) return;
+    
+    if (newQty <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+
+    if (newQty > product.total_stock) {
+      alert(`Only ${product.total_stock} units available in stock!`);
+      // Optionally reset to max stock or keep previous. Let's reset to max stock.
+      newQty = product.total_stock;
+    }
+
+    setCart(cart.map(i => i.product_id === productId ? { ...i, quantity: newQty } : i));
   }
 
   const subtotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
@@ -110,10 +128,19 @@ export default function POSTerminalPage() {
                  <div key={i.product_id} className="cart-row">
                     <div className="cart-row-details">
                       <strong>{i.name}</strong>
-                      <div style={{ fontSize: '0.8rem' }}>{i.quantity} x {i.price.toFixed(2)} DA (+{i.tax_rate}%)</div>
+                      <div className="cart-qty-control">
+                        <input 
+                          type="number" 
+                          min="1" 
+                          className="cart-qty-input" 
+                          value={i.quantity} 
+                          onChange={(e) => updateCartQuantity(i.product_id, parseInt(e.target.value) || 0)}
+                        />
+                        <span>x {i.price.toFixed(2)} DA</span>
+                      </div>
                     </div>
                     <div className="cart-row-actions">
-                       <button className="btn btn-muted btn-xs" onClick={() => removeFromCart(i.product_id)}>—</button>
+                       <button className="btn btn-danger btn-xs" title="Remove" onClick={() => removeFromCart(i.product_id)}>✕</button>
                     </div>
                  </div>
                ))}
@@ -150,6 +177,9 @@ export default function POSTerminalPage() {
         .pos-cart { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .cart-list { flex: 1; overflow-y: auto; margin-bottom: 1rem; }
         .cart-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9f9f9; }
+        .cart-qty-control { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 0.85rem; }
+        .cart-qty-input { width: 60px; padding: 2px 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; text-align: center; }
+        .cart-qty-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 4px rgba(52, 152, 219, 0.2); }
         .btn-xs { padding: 2px 8px; font-size: 0.8rem; }
         .cart-summary { border-top: 2px solid #f1f1f1; padding-top: 1rem; margin-bottom: 1rem; }
         .summary-line { display: flex; justify-content: space-between; color: #7f8c8d; font-size: 0.9rem; margin-bottom: 4px; }

@@ -1,0 +1,82 @@
+{
+    "products": [
+        {
+            "product_id": 1,
+            "name": "Nassim",
+            "description": "Nassim cigarettes are produced in Algeria, king size (85 mm), soft pack, 20 cigarettes in a pack.",
+            "img_url": "https://www.cigarettespedia.com/images/2/2b/Nassim_filtre_ks_20_s_with_vertical_lines_algeria.jpg",
+            "category": "cigarette",
+            "default_selling_price": 200.0,
+            "store_location": null,
+            "tax_category_id": 1,
+            "min_stock_threshold": 10,
+            "created_at": "2026-03-30T20:02:05"
+        },
+        {
+            "product_id": 2,
+            "name": "Dernier samurai",
+            "description": "A test product to verify image display",
+            "img_url": "https://m.media-amazon.com/images/I/810n4p3wxUL._AC_UF894,1000_QL80_.jpg",
+            "category": "Drinks",
+            "default_selling_price": 150.0,
+            "store_location": "Aisle 3",
+            "tax_category_id": 1,
+            "min_stock_threshold": 5,
+            "created_at": "2026-03-31T20:52:28"
+        },
+        {
+            "product_id": 3,
+            "name": "ships Mahbool",
+            "description": "Plant-based foods and beverages, Plant-based foods, Snacks, Cereals and potatoes, Salty snacks, Appetizers, Chips and fries, Crisps, Potato crisps, Salty snacks made from potato",
+            "img_url": "https://images.openfoodfacts.org/images/products/613/033/600/2509/front_fr.3.400.jpg",
+            "category": "Ships",
+            "default_selling_price": 20.0,
+            "store_location": "Aile 1",
+            "tax_category_id": 1,
+            "min_stock_threshold": 10,
+            "created_at": "2026-03-31T22:15:50"
+        }
+    ],
+    "users": [
+        {
+            "user_id": 1,
+            "username": "aklsof4",
+            "email": "aklsof@mail.com",
+            "user_firstName": "akl",
+            "user_lastName": "sof",
+            "user_address1": null,
+            "city": null,
+            "province": null,
+            "password_hash": "$2b$12$zZWxrfamtbzEbdepD7ESZeOa9y0UIyVv458bVEUQCP6vhTP2Vv1Bu",
+            "pin_hash": null,
+            "role": "Administrator",
+            "user_type": "staff",
+            "preferred_lang": "en",
+            "is_active": 1,
+            "created_at": "2026-04-04T15:50:14"
+        }
+    ],
+    "inventory_lots": [
+        {
+            "lot_id": 1,
+            "product_id": 1,
+            "quantity": 4,
+            "buying_price": 12.0,
+            "date_received": "2026-04-04T16:39:52"
+        },
+        {
+            "lot_id": 2,
+            "product_id": 2,
+            "quantity": 1,
+            "buying_price": 90.0,
+            "date_received": "2026-04-04T16:40:18"
+        },
+        {
+            "lot_id": 3,
+            "product_id": 3,
+            "quantity": 130,
+            "buying_price": 10.0,
+            "date_received": "2026-04-04T16:40:36"
+        }
+    ]
+}

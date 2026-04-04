@@ -41,13 +41,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     );
     
     await conn.commit();
-    conn.release();
     return NextResponse.json({ success: true });
   } catch (err: any) {
     if (conn) {
       await conn.rollback();
+    }
+    console.error('Order update error:', err);
+    return NextResponse.json({ error: err.message || err.sqlMessage || 'Failed to update order.' }, { status: 500 });
+  } finally {
+    if (conn) {
       conn.release();
     }
-    return NextResponse.json({ error: err.message || err.sqlMessage || 'Failed to update order.' }, { status: 500 });
   }
 }

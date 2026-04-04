@@ -38,14 +38,17 @@ export async function POST(req: NextRequest) {
     );
       
     await conn.commit();
-    conn.release();
     return NextResponse.json({ success: true });
   } catch (err: any) {
     if (conn) {
       await conn.rollback();
+    }
+    console.error('Stock adjustment error:', err);
+    return NextResponse.json({ error: err.message || err.sqlMessage || 'Failed to record adjustment.' }, { status: 500 });
+  } finally {
+    if (conn) {
       conn.release();
     }
-    return NextResponse.json({ error: err.message || err.sqlMessage || 'Failed to record adjustment.' }, { status: 500 });
   }
 }
 

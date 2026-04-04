@@ -14,6 +14,8 @@ from db import get_connection
 from pos.receipt import generate_receipt
 import pos_locale
 import subprocess
+import cache_manager
+from sync_manager import sync_worker
 
 
 class SalesWindow:
@@ -147,25 +149,57 @@ class SalesWindow:
         self.all_products = []
 
     def _load_products(self):
+        """Load products from local JSON cache for speed, fallback to SQL if empty."""
         try:
+            # 1. Try Cache First
+            cached_products = cache_manager.get_table('products')
+            cached_lots = cache_manager.get_table('inventory_lots')
+            
+            if cached_products:
+                print("[CACHE] Loading products from local JSON.")
+                self.all_products = []
+                for p in cached_products:
+                    # Calculate stock locally from cached lots
+                    stock = sum(float(l['quantity']) for l in cached_lots if l['product_id'] == p['product_id'])
+                    # Very simple price logic for cache (can be improved)
+                    price = p.get('effective_price') or p.get('default_selling_price', 0)
+                    
+                    self.all_products.append({
+                        'product_id': p['product_id'],
+                        'name': p['name'],
+                        'category': p['category'],
+                        'effective_price': price,
+                        'tax_rate': p.get('tax_rate', 0), # Simplified for cache
+                        'total_stock': stock
+                    })
+                self._populate_product_tree(self.all_products)
+                return
+
+            # 2. Fallback to SQL (Only if cache is empty)
+            print("[DB] Cache miss. Fetching from SQL...")
             conn = get_connection()
-            cur = conn.cursor()
-            cur.execute(
-                """SELECT p.product_id, p.name, p.category,
-                          COALESCE(v.effective_price, p.default_selling_price) AS effective_price,
-                          t.rate AS tax_rate,
-                          COALESCE(SUM(il.quantity), 0) AS total_stock
-                   FROM products p
-                   JOIN tax_categories t ON t.tax_category_id = p.tax_category_id
-                   LEFT JOIN vw_active_price v ON v.product_id = p.product_id
-                   LEFT JOIN inventory_lots il ON il.product_id = p.product_id
-                   GROUP BY p.product_id, p.name, p.category,
-                            v.effective_price, p.default_selling_price, t.rate
-                   ORDER BY p.category, p.name"""
-            )
-            self.all_products = cur.fetchall()
-            cur.close(); conn.close()
-            self._populate_product_tree(self.all_products)
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    """SELECT p.product_id, p.name, p.category,
+                              COALESCE(v.effective_price, p.default_selling_price) AS effective_price,
+                              t.rate AS tax_rate,
+                              COALESCE(SUM(il.quantity), 0) AS total_stock
+                       FROM products p
+                       JOIN tax_categories t ON t.tax_category_id = p.tax_category_id
+                       LEFT JOIN vw_active_price v ON v.product_id = p.product_id
+                       LEFT JOIN inventory_lots il ON il.product_id = p.product_id
+                       GROUP BY p.product_id, p.name, p.category,
+                                v.effective_price, p.default_selling_price, t.rate
+                       ORDER BY p.category, p.name"""
+                )
+                self.all_products = cur.fetchall()
+                cur.close()
+                # Update cache immediately so next time is fast
+                cache_manager.update_table('products', self.all_products)
+                self._populate_product_tree(self.all_products)
+            finally:
+                conn.close()
         except Exception as e:
             messagebox.showerror(pos_locale.t("db_error"), str(e))
 
@@ -276,92 +310,97 @@ class SalesWindow:
 
         try:
             conn = get_connection()
-            conn.begin()
-            cur = conn.cursor()
+            try:
+                conn.begin()
+                cur = conn.cursor()
 
-            # Replaced trg_prevent_inactive_user_login & trg_default_receipt_language
-            cur.execute("SELECT is_active, preferred_lang FROM users WHERE user_id = %s", (self.user['user_id'],))
-            user_row = cur.fetchone()
-            if not user_row or not user_row['is_active']:
-                raise Exception("Transaction rejected: the associated user account is inactive.")
-            receipt_lang = user_row['preferred_lang'] or 'en'
+                # Replaced trg_prevent_inactive_user_login & trg_default_receipt_language
+                cur.execute("SELECT is_active, preferred_lang FROM users WHERE user_id = %s", (self.user['user_id'],))
+                user_row = cur.fetchone()
+                if not user_row or not user_row['is_active']:
+                    raise Exception("Transaction rejected: the associated user account is inactive.")
+                receipt_lang = user_row['preferred_lang'] or 'en'
 
-            # Calculate total amount
-            total_amount = abs(sum(
-                (item['unit_price'] * abs(item['quantity'])) * (1 + item['tax_rate'] / 100)
-                for item in self.cart
-            ))
+                # Calculate total amount
+                total_amount = abs(sum(
+                    (item['unit_price'] * abs(item['quantity'])) * (1 + item['tax_rate'] / 100)
+                    for item in self.cart
+                ))
 
-            # Replaced trg_transaction_total_verify
-            if total_amount <= 0:
-                raise Exception("Transaction total_amount must be greater than zero.")
+                # Replaced trg_transaction_total_verify
+                if total_amount <= 0:
+                    raise Exception("Transaction total_amount must be greater than zero.")
 
-            # Insert transaction
-            cur.execute(
-                "INSERT INTO transactions (user_id, total_amount, is_refund, receipt_language) VALUES (%s, %s, %s, %s)",
-                (self.user['user_id'], total_amount, 1 if self.refund_mode else 0, receipt_lang)
-            )
-            transaction_id = cur.lastrowid
-
-            receipt_items = []
-            for item in self.cart:
-                # FIFO: get oldest lot with stock
+                # Insert transaction
                 cur.execute(
-                    """SELECT lot_id, remaining_quantity FROM vw_fifo_lot_queue
-                       WHERE product_id = %s LIMIT 1""",
-                    (item['product_id'],)
+                    "INSERT INTO transactions (user_id, total_amount, is_refund, receipt_language) VALUES (%s, %s, %s, %s)",
+                    (self.user['user_id'], total_amount, 1 if self.refund_mode else 0, receipt_lang)
                 )
-                lot = cur.fetchone()
-                lot_id = lot['lot_id'] if lot else None
+                transaction_id = cur.lastrowid
 
-                qty = item['quantity']
-                unit_price = item['unit_price']
-                tax_rate = item['tax_rate']
-                line_total = unit_price * abs(qty)
-                tax_amount = line_total * tax_rate / 100
+                receipt_items = []
+                for item in self.cart:
+                    # FIFO: get oldest lot with stock
+                    cur.execute(
+                        """SELECT lot_id, remaining_quantity FROM vw_fifo_lot_queue
+                           WHERE product_id = %s LIMIT 1""",
+                        (item['product_id'],)
+                    )
+                    lot = cur.fetchone()
+                    lot_id = lot['lot_id'] if lot else None
 
-                cur.execute(
-                    """INSERT INTO transaction_items
-                       (transaction_id, product_id, lot_id, quantity, price_applied, tax_applied)
-                       VALUES (%s, %s, %s, %s, %s, %s)""",
-                    (transaction_id, item['product_id'], lot_id, qty, unit_price, tax_amount)
-                )
+                    qty = item['quantity']
+                    unit_price = item['unit_price']
+                    tax_rate = item['tax_rate']
+                    line_total = unit_price * abs(qty)
+                    tax_amount = line_total * tax_rate / 100
 
-                # Replaced trg_sale_deduct_stock
-                if qty > 0 and lot_id:
-                    cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))
-                    lot_row = cur.fetchone()
-                    if not lot_row or lot_row['quantity'] < qty:
-                        raise Exception("Insufficient stock in the selected lot for this sale.")
+                    cur.execute(
+                        """INSERT INTO transaction_items
+                           (transaction_id, product_id, lot_id, quantity, price_applied, tax_applied)
+                           VALUES (%s, %s, %s, %s, %s, %s)""",
+                        (transaction_id, item['product_id'], lot_id, qty, unit_price, tax_amount)
+                    )
+
+                    # Replaced trg_sale_deduct_stock
+                    if qty > 0 and lot_id:
+                        cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))
+                        lot_row = cur.fetchone()
+                        if not lot_row or lot_row['quantity'] < qty:
+                            raise Exception("Insufficient stock in the selected lot for this sale.")
+                        
+                        cur.execute(
+                            "UPDATE inventory_lots SET quantity = quantity - %s WHERE lot_id = %s",
+                            (qty, lot_id)
+                        )
                     
-                    cur.execute(
-                        "UPDATE inventory_lots SET quantity = quantity - %s WHERE lot_id = %s",
-                        (qty, lot_id)
-                    )
-                
-                # Replaced trg_refund_create_lot
-                if qty < 0:
-                    buying_price = 0
-                    if lot_id:
-                        cur.execute("SELECT buying_price FROM inventory_lots WHERE lot_id = %s", (lot_id,))
-                        bp_row = cur.fetchone()
-                        if bp_row:
-                            buying_price = bp_row['buying_price']
-                            
-                    cur.execute(
-                        "INSERT INTO inventory_lots (product_id, quantity, buying_price) VALUES (%s, %s, %s)",
-                        (item['product_id'], abs(qty), buying_price)
-                    )
+                    # Replaced trg_refund_create_lot
+                    if qty < 0:
+                        buying_price = 0
+                        if lot_id:
+                            cur.execute("SELECT buying_price FROM inventory_lots WHERE lot_id = %s", (lot_id,))
+                            bp_row = cur.fetchone()
+                            if bp_row:
+                                buying_price = bp_row['buying_price']
+                                
+                        cur.execute(
+                            "INSERT INTO inventory_lots (product_id, quantity, buying_price) VALUES (%s, %s, %s)",
+                            (item['product_id'], abs(qty), buying_price)
+                        )
 
-                receipt_items.append({
-                    'name': item['name'], 'quantity': abs(qty),
-                    'unit_price': unit_price, 'tax_rate': tax_rate,
-                    'line_total': line_total, 'tax_amount': tax_amount,
-                })
+                    receipt_items.append({
+                        'name': item['name'], 'quantity': abs(qty),
+                        'unit_price': unit_price, 'tax_rate': tax_rate,
+                        'line_total': line_total, 'tax_amount': tax_amount,
+                    })
 
-            conn.commit()
-            cur.close()
-            conn.close()
+                conn.commit()
+                cur.close()
+            except Exception as e:
+                conn.rollback()
+                raise e
+            finally:
+                conn.close()
 
             # Generate receipt
             pdf_path = generate_receipt(transaction_id, self.user['username'], receipt_items)
@@ -375,7 +414,10 @@ class SalesWindow:
                 pos_locale.t("transaction_saved", id=transaction_id, file=os.path.basename(pdf_path))
             )
             self._clear_cart()
-            self._load_products()  # Refresh stock counts
+            # Update local cache immediately so stock is accurate
+            try: sync_worker._refresh_cache()
+            except: pass
+            self._load_products()  # Refresh the UI from newly synced JSON
 
         except Exception as e:
             messagebox.showerror(pos_locale.t("checkout_error"), str(e))
@@ -391,11 +433,13 @@ class SalesWindow:
         # Update user's preferred language in the database
         try:
             conn = get_connection()
-            cur = conn.cursor()
-            cur.execute("UPDATE users SET preferred_lang = %s WHERE user_id = %s", (lang_code, self.user['user_id']))
-            conn.commit()
-            cur.close()
-            conn.close()
+            try:
+                cur = conn.cursor()
+                cur.execute("UPDATE users SET preferred_lang = %s WHERE user_id = %s", (lang_code, self.user['user_id']))
+                conn.commit()
+                cur.close()
+            finally:
+                conn.close()
             self.user['preferred_lang'] = lang_code
         except Exception as e:
             print("Failed to save language preference:", e)
