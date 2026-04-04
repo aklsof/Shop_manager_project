@@ -10,10 +10,10 @@ import sys
 import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from config import APP_NAME, COLOR_RED, COLOR_RED_DK, COLOR_GREEN, COLOR_WHITE, COLOR_BG, COLOR_TEXT, COLOR_MUTED, COLOR_BORDER
+from config import APP_NAME, COLOR_RED, COLOR_RED_DK, COLOR_GREEN, COLOR_WHITE, COLOR_BG, COLOR_TEXT, COLOR_MUTED, COLOR_BORDER, BASE_DIR, INTERNAL_DIR
 from db import get_connection
 from auth.registration_window import RegistrationWindow
-import locale as pos_locale   # our translation module
+import pos_locale   # our translation module
 
 
 class LoginWindow:
@@ -33,7 +33,7 @@ class LoginWindow:
         self.update_available = False
         try:
             import urllib.request
-            version_path = os.path.join(os.path.dirname(__file__), '..', 'version.txt')
+            version_path = os.path.join(INTERNAL_DIR, 'version.txt')
             if os.path.exists(version_path):
                 with open(version_path, 'r') as f: local_v = f.read().strip()
                 
@@ -127,7 +127,7 @@ class LoginWindow:
 
         try:
             conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             cursor.execute(
                 "SELECT user_id, username, password_hash, role, user_type, preferred_lang, is_active "
                 "FROM users WHERE username = %s",
@@ -180,7 +180,7 @@ class LoginWindow:
         win.resizable(False, False)
         win.configure(bg=COLOR_BG)
 
-        env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+        env_path = os.path.join(BASE_DIR, '.env')
         env_data = {'DB_HOST': 'localhost', 'DB_NAME': 'hybrid_store', 'DB_USER': 'root', 'DB_PASSWORD': '', 'DB_PORT': '3306'}
         if os.path.exists(env_path):
             with open(env_path, 'r') as f:

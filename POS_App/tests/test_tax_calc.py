@@ -11,7 +11,7 @@ from db import get_connection
 def test_tax_calculation():
     """Tax in transaction_items must equal price_applied × tax_rate / 100."""
     conn = get_connection()
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor()
     cur.execute(
         """SELECT ti.price_applied, ti.tax_applied, ti.quantity,
                   t.rate AS tax_rate

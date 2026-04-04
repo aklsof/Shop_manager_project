@@ -11,7 +11,7 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from config import COLOR_RED, COLOR_GREEN, COLOR_WHITE, COLOR_BG, COLOR_MUTED
 from db import get_connection
-import locale as pos_locale
+import pos_locale
 
 POLL_INTERVAL = 30_000  # ms
 
@@ -139,8 +139,8 @@ class WebOrdersDashboard:
             # Execute checkout flow for web order
             try:
                 conn = get_connection()
-                conn.start_transaction()
-                cur = conn.cursor(dictionary=True)
+                conn.begin()
+                cur = conn.cursor()
 
                 # Replaced trg_order_status_workflow
                 cur.execute("SELECT status FROM web_orders WHERE order_id = %s FOR UPDATE", (order_id,))
@@ -254,8 +254,8 @@ class WebOrdersDashboard:
             # Just advance status
             try:
                 conn = get_connection()
-                conn.start_transaction()
-                cur = conn.cursor(dictionary=True)
+                conn.begin()
+                cur = conn.cursor()
                 
                 cur.execute("SELECT status FROM web_orders WHERE order_id = %s FOR UPDATE", (order_id,))
                 order_row = cur.fetchone()

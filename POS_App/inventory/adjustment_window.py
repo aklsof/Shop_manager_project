@@ -66,7 +66,7 @@ class AdjustmentWindow:
     def _load_lots(self):
         try:
             conn = get_connection()
-            cur = conn.cursor(dictionary=True)
+            cur = conn.cursor()
             cur.execute("""SELECT il.lot_id, p.name AS product_name, il.quantity, il.date_received
                            FROM inventory_lots il JOIN products p ON p.product_id = il.product_id
                            WHERE il.quantity > 0 ORDER BY il.date_received DESC""")
@@ -80,7 +80,7 @@ class AdjustmentWindow:
     def _load_log(self):
         try:
             conn = get_connection()
-            cur = conn.cursor(dictionary=True)
+            cur = conn.cursor()
             cur.execute("SELECT * FROM vw_inventory_adjustment_log ORDER BY adjustment_date DESC LIMIT 30")
             rows = cur.fetchall()
             cur.close(); conn.close()
@@ -117,8 +117,8 @@ class AdjustmentWindow:
         lot_id = self.lots[sel]['lot_id']
         try:
             conn = get_connection()
-            conn.start_transaction()
-            cur = conn.cursor(dictionary=True)
+            conn.begin()
+            cur = conn.cursor()
             
             # Replaced Trigger Logic: ensure non-negative result
             cur.execute("SELECT quantity FROM inventory_lots WHERE lot_id = %s FOR UPDATE", (lot_id,))

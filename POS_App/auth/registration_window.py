@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from config import APP_NAME, COLOR_RED, COLOR_RED_DK, COLOR_WHITE, COLOR_BG, COLOR_MUTED
 from db import get_connection
-import locale as pos_locale
+import pos_locale
 
 
 # Language options shown in the registration form
@@ -118,7 +118,7 @@ class RegistrationWindow:
 
         try:
             conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
 
             # Check if username or email exists
             cursor.execute("SELECT user_id FROM users WHERE username = %s OR email = %s",

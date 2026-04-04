@@ -11,7 +11,7 @@ from db import get_connection
 def test_fifo_lot_order():
     """Oldest lot (by date_received) should appear first in vw_fifo_lot_queue."""
     conn = get_connection()
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor()
 
     # Get first two lots for any product
     cur.execute("SELECT lot_id, product_id, remaining_quantity, date_received FROM vw_fifo_lot_queue LIMIT 10")

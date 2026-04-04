@@ -12,7 +12,7 @@ from config import (APP_NAME, COLOR_RED, COLOR_RED_DK, COLOR_GREEN,
                     COLOR_WHITE, COLOR_BG, COLOR_TEXT, COLOR_MUTED, COLOR_BORDER)
 from db import get_connection
 from pos.receipt import generate_receipt
-import locale as pos_locale
+import pos_locale
 import subprocess
 
 
@@ -149,7 +149,7 @@ class SalesWindow:
     def _load_products(self):
         try:
             conn = get_connection()
-            cur = conn.cursor(dictionary=True)
+            cur = conn.cursor()
             cur.execute(
                 """SELECT p.product_id, p.name, p.category,
                           COALESCE(v.effective_price, p.default_selling_price) AS effective_price,
@@ -276,8 +276,8 @@ class SalesWindow:
 
         try:
             conn = get_connection()
-            conn.start_transaction()
-            cur = conn.cursor(dictionary=True)
+            conn.begin()
+            cur = conn.cursor()
 
             # Replaced trg_prevent_inactive_user_login & trg_default_receipt_language
             cur.execute("SELECT is_active, preferred_lang FROM users WHERE user_id = %s", (self.user['user_id'],))

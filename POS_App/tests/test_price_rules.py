@@ -12,7 +12,7 @@ from datetime import datetime
 def test_active_price_rule_within_dates():
     """vw_active_price should show promotional_price only for currently active rules."""
     conn = get_connection()
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor()
     now = datetime.now()
 
     cur.execute(
