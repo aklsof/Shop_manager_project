@@ -21,9 +21,12 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   waitForConnections: true,
-  connectionLimit: 1, // Respect the filess.io 5-conn limit
-  queueLimit: 1,
+  connectionLimit: 5, // Allows multiple concurrent requests
+  queueLimit: 0,
   ...ssl_config,
 });
 
+export const primaryPool = pool;
+export const secondaryPool = pool;
 export default pool;
+

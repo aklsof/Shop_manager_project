@@ -8,6 +8,7 @@ export interface Product {
   description: string;
   img_url: string;
   category: string;
+  category_id: number;
   default_selling_price: number;
   store_location: string | null;
   tax_category_id: number;

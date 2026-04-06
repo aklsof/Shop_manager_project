@@ -181,17 +181,17 @@ class SalesWindow:
             try:
                 cur = conn.cursor()
                 cur.execute(
-                    """SELECT p.product_id, p.name, p.category,
+                    """SELECT p.product_id, p.name, v.category,
                               COALESCE(v.effective_price, p.default_selling_price) AS effective_price,
                               t.rate AS tax_rate,
                               COALESCE(SUM(il.quantity), 0) AS total_stock
                        FROM products p
                        JOIN tax_categories t ON t.tax_category_id = p.tax_category_id
-                       LEFT JOIN vw_active_price v ON v.product_id = p.product_id
+                       JOIN vw_active_price v ON v.product_id = p.product_id
                        LEFT JOIN inventory_lots il ON il.product_id = p.product_id
-                       GROUP BY p.product_id, p.name, p.category,
+                       GROUP BY p.product_id, p.name, v.category,
                                 v.effective_price, p.default_selling_price, t.rate
-                       ORDER BY p.category, p.name"""
+                       ORDER BY v.category, p.name"""
                 )
                 self.all_products = cur.fetchall()
                 cur.close()

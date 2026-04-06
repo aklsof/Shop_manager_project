@@ -27,15 +27,15 @@ export async function PUT(
 
   try {
     const body = await req.json();
-    const { name, category, default_selling_price, store_location, tax_category_id, min_stock_threshold, description, img_url } = body;
+    const { name, category_id, default_selling_price, store_location, tax_category_id, min_stock_threshold, description, img_url } = body;
 
-    if (!name || !category || !default_selling_price || !tax_category_id) {
+    if (!name || !category_id || default_selling_price === undefined || !tax_category_id) {
       return NextResponse.json({ error: 'Name, category, price, and tax category are required.' }, { status: 400 });
     }
 
     const [result] = await pool.query<ResultSetHeader>(
       `UPDATE products
-       SET name = ?, description = ?, img_url = ?, category = ?,
+       SET name = ?, description = ?, img_url = ?, category_id = ?,
            default_selling_price = ?, store_location = ?,
            tax_category_id = ?, min_stock_threshold = ?
        WHERE product_id = ?`,
@@ -43,7 +43,7 @@ export async function PUT(
         name,
         description || null,
         img_url || null,
-        category,
+        category_id,
         default_selling_price,
         store_location || null,
         tax_category_id,
@@ -58,6 +58,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true });
   } catch (err) {
+    if ((err as { code?: string }).code === 'ER_DUP_ENTRY') {
+      return NextResponse.json({ error: 'Another product already has this name.' }, { status: 409 });
+    }
     console.error(err);
     return NextResponse.json({ error: 'Failed to update product.' }, { status: 500 });
   }

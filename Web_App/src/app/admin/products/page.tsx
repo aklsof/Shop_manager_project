@@ -8,7 +8,7 @@ import { Product, TaxCategory, ProductCategory } from '@/lib/types';
 
 const EMPTY_FORM = {
   name: '',
-  category: '',
+  category_id: '',
   default_selling_price: '',
   store_location: '',
   tax_category_id: '',
@@ -36,19 +36,37 @@ export default function AdminProductsPage() {
   const [saving, setSaving] = useState(false);
 
   const refreshProducts = () =>
-    fetch('/api/admin/products').then(r => r.json()).then(setProducts);
+    fetch('/api/admin/products')
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) throw new Error(d.error);
+        setProducts(d);
+      });
 
   useEffect(() => {
     fetch('/api/session').then(r => r.json()).then(d => {
       if (!d.user || d.user.role !== 'Administrator') router.push('/login');
     });
-    refreshProducts();
-    fetch('/api/admin/tax-categories').then(r => r.json()).then(setTaxCats);
-    fetch('/api/admin/categories').then(r => r.json()).then((cats: ProductCategory[]) => {
-      setCategories(cats);
-      // Pre-select the first category in the add form once loaded
-      if (cats.length > 0) setForm(f => ({ ...f, category: f.category || cats[0].name }));
-    });
+    refreshProducts().catch(err => setAddError("Failed to load products: " + err.message));
+    fetch('/api/admin/tax-categories')
+      .then(r => r.json())
+      .then(cats => {
+        if (cats.error) throw new Error(cats.error);
+        setTaxCats(cats);
+        // Pre-select the first tax category in the add form
+        if (cats.length > 0) setForm(f => ({ ...f, tax_category_id: f.tax_category_id || String(cats[0].tax_category_id) }));
+      })
+      .catch(err => setAddError("Failed to load tax categories: " + err.message));
+
+    fetch('/api/admin/categories')
+      .then(r => r.json())
+      .then((cats: ProductCategory[]) => {
+        if ((cats as any).error) throw new Error((cats as any).error);
+        setCategories(cats);
+        // Pre-select the first category in the add form once loaded
+        if (cats.length > 0) setForm(f => ({ ...f, category_id: f.category_id || String(cats[0].category_id) }));
+      })
+      .catch(err => setAddError("Failed to load categories: " + err.message));
   }, [router]);
 
   // ── Add product ───────────────────────────────────────────────────────────
@@ -60,6 +78,7 @@ export default function AdminProductsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...form,
+        category_id: Number(form.category_id),
         default_selling_price: Number(form.default_selling_price),
         tax_category_id: Number(form.tax_category_id),
         min_stock_threshold: Number(form.min_stock_threshold),
@@ -81,7 +100,7 @@ export default function AdminProductsPage() {
     setEditError(''); setEditSuccess('');
     setEditForm({
       name: p.name,
-      category: p.category,
+      category_id: String(p.category_id),
       default_selling_price: String(p.default_selling_price),
       store_location: p.store_location ?? '',
       tax_category_id: String(p.tax_category_id),
@@ -102,6 +121,7 @@ export default function AdminProductsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...editForm,
+        category_id: Number(editForm.category_id),
         default_selling_price: Number(editForm.default_selling_price),
         tax_category_id: Number(editForm.tax_category_id),
         min_stock_threshold: Number(editForm.min_stock_threshold),
@@ -169,9 +189,9 @@ export default function AdminProductsPage() {
                 </div>
                 <div className="form-group">
                   <label>Category</label>
-                  <select className="form-control" value={editForm.category}
-                    onChange={e => setEditForm({ ...editForm, category: e.target.value })}>
-                    {categories.map((c: ProductCategory) => <option key={c.category_id} value={c.name}>{c.name}</option>)}
+                  <select className="form-control" value={editForm.category_id}
+                    onChange={e => setEditForm({ ...editForm, category_id: e.target.value })}>
+                    {categories.map((c: ProductCategory) => <option key={c.category_id} value={c.category_id}>{c.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -258,8 +278,8 @@ export default function AdminProductsPage() {
             <div className="form-row">
               <div className="form-group"><label>Name</label><input className="form-control" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
               <div className="form-group"><label>Category</label>
-                <select className="form-control" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-                  {categories.map((c: ProductCategory) => <option key={c.category_id} value={c.name}>{c.name}</option>)}
+                <select className="form-control" value={form.category_id} onChange={e => setForm({ ...form, category_id: e.target.value })}>
+                  {categories.map((c: ProductCategory) => <option key={c.category_id} value={c.category_id}>{c.name}</option>)}
                 </select>
               </div>
             </div>

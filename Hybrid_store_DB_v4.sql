@@ -76,16 +76,20 @@ CREATE TABLE IF NOT EXISTS `products` (
   `name`                  varchar(100)  NOT NULL,
   `description`           text          DEFAULT NULL,
   `img_url`               varchar(512)  DEFAULT NULL,
-  `category`              varchar(50)   NOT NULL,
+  `category_id`           int(11)       NOT NULL,
   `default_selling_price` decimal(10,2) NOT NULL CHECK (`default_selling_price` >= 0),
   `store_location`        varchar(100)  DEFAULT NULL,
   `tax_category_id`       int(11)       NOT NULL,
   `min_stock_threshold`   int(11)       DEFAULT 0 CHECK (`min_stock_threshold` >= 0),
   `created_at`            timestamp     NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`product_id`),
+  UNIQUE KEY `uq_product_name` (`name`),
   KEY `idx_products_tax_category` (`tax_category_id`),
+  KEY `idx_products_category`     (`category_id`),
   CONSTRAINT `products_ibfk_1`
-    FOREIGN KEY (`tax_category_id`) REFERENCES `tax_categories` (`tax_category_id`)
+    FOREIGN KEY (`tax_category_id`) REFERENCES `tax_categories` (`tax_category_id`),
+  CONSTRAINT `products_ibfk_2`
+    FOREIGN KEY (`category_id`)     REFERENCES `product_categories` (`category_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -238,7 +242,8 @@ CREATE OR REPLACE VIEW `vw_active_price` AS
 SELECT
   p.product_id,
   p.name                    AS product_name,
-  p.category,
+  c.name                    AS category,
+  p.category_id,
   p.default_selling_price,
   pr.promotional_price,
   pr.rule_type,
@@ -247,6 +252,7 @@ SELECT
   COALESCE(pr.promotional_price, p.default_selling_price) AS effective_price,
   CASE WHEN pr.rule_id IS NOT NULL THEN 1 ELSE 0 END      AS has_active_deal
 FROM `products` p
+JOIN `product_categories` c ON c.category_id = p.category_id
 LEFT JOIN `price_rules` pr
   ON  pr.product_id = p.product_id
   AND pr.is_active  = 1
@@ -323,7 +329,7 @@ FROM `transaction_items` ti
 JOIN `transactions`    t  ON t.transaction_id = ti.transaction_id
 JOIN `products`        p  ON p.product_id     = ti.product_id
 JOIN `inventory_lots`  il ON il.lot_id        = ti.lot_id
-GROUP BY CAST(t.transaction_date AS date), p.product_id, p.name, p.category;
+GROUP BY CAST(t.transaction_date AS date), p.product_id, p.name, p.category_id;
 
 -- --------------------------------------------------------
 -- vw_inventory_adjustment_log
@@ -335,7 +341,7 @@ SELECT
   u.username                                            AS adjusted_by,
   u.role,
   p.name                                                AS product_name,
-  p.category,
+  c.name                                                AS category,
   il.lot_id,
   il.date_received                                      AS lot_received_date,
   il.buying_price                                       AS lot_buying_price,
@@ -345,7 +351,8 @@ SELECT
 FROM `inventory_adjustments` ia
 JOIN `users`          u  ON u.user_id    = ia.user_id
 JOIN `inventory_lots` il ON il.lot_id   = ia.lot_id
-JOIN `products`       p  ON p.product_id = il.product_id;
+JOIN `products`       p  ON p.product_id = il.product_id
+JOIN `product_categories` c ON c.category_id = p.category_id;
 
 -- --------------------------------------------------------
 -- vw_product_stock  (referenced by vw_low_stock_alerts)
@@ -354,7 +361,7 @@ CREATE OR REPLACE VIEW `vw_product_stock` AS
 SELECT
   p.product_id,
   p.name                AS product_name,
-  p.category,
+  c.name                AS category,
   p.store_location,
   p.min_stock_threshold,
   COALESCE(SUM(il.quantity), 0)
@@ -366,6 +373,7 @@ SELECT
     THEN 1 ELSE 0
   END                   AS is_low_stock
 FROM `products` p
+JOIN `product_categories` c ON c.category_id = p.category_id
 LEFT JOIN `inventory_lots` il
   ON il.product_id = p.product_id
 LEFT JOIN (
@@ -374,7 +382,7 @@ LEFT JOIN (
   GROUP  BY lot_id
 ) adj ON adj.lot_id = il.lot_id
 GROUP BY
-  p.product_id, p.name, p.category,
+  p.product_id, p.name, c.name,
   p.store_location, p.min_stock_threshold;
 
 -- --------------------------------------------------------
