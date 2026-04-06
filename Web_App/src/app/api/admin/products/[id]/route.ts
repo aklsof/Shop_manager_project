@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { ResultSetHeader } from 'mysql2';
+import { refreshCoreCaches } from '@/lib/cacheDatasets';
 
 async function requireAdmin() {
   const session = await getSession();
@@ -56,6 +57,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
     }
 
+    await refreshCoreCaches();
     return NextResponse.json({ success: true });
   } catch (err) {
     if ((err as { code?: string }).code === 'ER_DUP_ENTRY') {

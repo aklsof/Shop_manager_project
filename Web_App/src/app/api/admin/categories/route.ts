@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { ResultSetHeader } from 'mysql2';
+import { getCacheFirst } from '@/lib/jsonCache';
+import { loadCategoriesFromSql, refreshCoreCaches } from '@/lib/cacheDatasets';
 
 async function requireAdmin() {
   const session = await getSession();
@@ -15,8 +17,13 @@ async function requireAdmin() {
 
 export async function GET() {
   if (!(await requireAdmin())) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
-  const [rows] = await pool.query('SELECT * FROM product_categories ORDER BY name');
-  return NextResponse.json(rows);
+  try {
+    const rows = await getCacheFirst('admin-categories', loadCategoriesFromSql);
+    return NextResponse.json(rows);
+  } catch (err: unknown) {
+    const message = (err as { message?: string }).message || 'Failed to fetch categories.';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -30,6 +37,7 @@ export async function POST(req: NextRequest) {
       'INSERT INTO product_categories (name) VALUES (?)',
       [name.trim()]
     );
+    await refreshCoreCaches();
     return NextResponse.json({ success: true, category_id: result.insertId }, { status: 201 });
   } catch (err: unknown) {
     const mysqlErr = err as { code?: string };

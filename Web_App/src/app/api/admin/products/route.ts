@@ -5,7 +5,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getSession } from '@/lib/session';
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { ResultSetHeader } from 'mysql2';
+import { getCacheFirst } from '@/lib/jsonCache';
+import { loadAdminProductsFromSql, refreshCoreCaches } from '@/lib/cacheDatasets';
 
 async function requireAdmin(req?: NextRequest) {
   void req;
@@ -16,18 +18,7 @@ async function requireAdmin(req?: NextRequest) {
 
 export async function GET() {
   if (!(await requireAdmin())) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT p.*, pc.name AS category, t.name AS tax_category_name, t.rate AS tax_rate,
-            COALESCE(SUM(il.quantity),0) AS total_stock
-     FROM products p
-     JOIN product_categories pc ON pc.category_id = p.category_id
-     JOIN tax_categories t ON t.tax_category_id = p.tax_category_id
-     LEFT JOIN inventory_lots il ON il.product_id = p.product_id
-     GROUP BY p.product_id, p.name, p.description, p.img_url, p.category_id, pc.name,
-              p.default_selling_price, p.store_location, p.tax_category_id,
-              p.min_stock_threshold, p.created_at, t.name, t.rate
-     ORDER BY pc.name, p.name`
-  );
+  const rows = await getCacheFirst('admin-products', loadAdminProductsFromSql);
   return NextResponse.json(rows);
 }
 
@@ -43,6 +34,7 @@ export async function POST(req: NextRequest) {
       'INSERT INTO products (name, description, img_url, category_id, default_selling_price, store_location, tax_category_id, min_stock_threshold) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [name, description || null, img_url || null, category_id, default_selling_price, store_location || null, tax_category_id, min_stock_threshold || 0]
     );
+    await refreshCoreCaches();
     return NextResponse.json({ success: true, product_id: result.insertId }, { status: 201 });
   } catch (err) {
     if ((err as { code?: string }).code === 'ER_DUP_ENTRY') {

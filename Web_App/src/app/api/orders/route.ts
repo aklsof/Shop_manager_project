@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { refreshCoreCaches } from '@/lib/cacheDatasets';
 
 export async function GET() {
   const session = await getSession();
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
         );
       }
       await conn.commit();
+      await refreshCoreCaches();
       return NextResponse.json({ success: true, order_id: orderId });
     } catch (err) {
       await conn.rollback();

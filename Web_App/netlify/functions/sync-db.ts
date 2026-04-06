@@ -6,7 +6,7 @@ export default async (req: Request) => {
 
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
   const host = process.env.URL || 'localhost:3000';
-  const url = `${protocol}://${host}/api/admin/sync`;
+  const url = `${protocol}://${host}/api/cache/refresh`;
 
   try {
     const res = await fetch(url, {
@@ -28,5 +28,5 @@ export default async (req: Request) => {
 };
 
 export const config: Config = {
-  schedule: "*/2 * * * *", // Run every 2 minutes
+  schedule: "*/5 * * * *", // Run every 5 minutes
 };

@@ -49,24 +49,40 @@ export default function AdminProductsPage() {
     });
     refreshProducts().catch(err => setAddError("Failed to load products: " + err.message));
     fetch('/api/admin/tax-categories')
-      .then(r => r.json())
+      .then(async r => {
+        const raw = await r.text();
+        if (!raw.trim()) {
+          throw new Error('Empty response body from /api/admin/tax-categories');
+        }
+        return JSON.parse(raw);
+      })
       .then(cats => {
         if (cats.error) throw new Error(cats.error);
         setTaxCats(cats);
         // Pre-select the first tax category in the add form
         if (cats.length > 0) setForm(f => ({ ...f, tax_category_id: f.tax_category_id || String(cats[0].tax_category_id) }));
       })
-      .catch(err => setAddError("Failed to load tax categories: " + err.message));
+      .catch(err => {
+        setAddError("Failed to load tax categories: " + err.message);
+      });
 
     fetch('/api/admin/categories')
-      .then(r => r.json())
+      .then(async r => {
+        const raw = await r.text();
+        if (!raw.trim()) {
+          throw new Error('Empty response body from /api/admin/categories');
+        }
+        return JSON.parse(raw);
+      })
       .then((cats: ProductCategory[]) => {
         if ((cats as any).error) throw new Error((cats as any).error);
         setCategories(cats);
         // Pre-select the first category in the add form once loaded
         if (cats.length > 0) setForm(f => ({ ...f, category_id: f.category_id || String(cats[0].category_id) }));
       })
-      .catch(err => setAddError("Failed to load categories: " + err.message));
+      .catch(err => {
+        setAddError("Failed to load categories: " + err.message);
+      });
   }, [router]);
 
   // ── Add product ───────────────────────────────────────────────────────────

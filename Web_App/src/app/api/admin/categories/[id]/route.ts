@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { refreshCoreCaches } from '@/lib/cacheDatasets';
 
 async function requireAdmin() {
   const session = await getSession();
@@ -36,6 +37,7 @@ export async function PUT(
 
     if (result.affectedRows === 0) return NextResponse.json({ error: 'Category not found.' }, { status: 404 });
 
+    await refreshCoreCaches();
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     const mysqlErr = err as { code?: string };
@@ -72,6 +74,7 @@ export async function DELETE(
       [categoryId]
     );
     if (result.affectedRows === 0) return NextResponse.json({ error: 'Category not found.' }, { status: 404 });
+    await refreshCoreCaches();
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error(err);

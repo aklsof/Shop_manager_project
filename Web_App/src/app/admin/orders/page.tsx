@@ -21,7 +21,9 @@ export default function AdminOrdersPage() {
   const [filter, setFilter] = useState('All');
 
   useEffect(() => {
-    fetch('/api/session').then(r => r.json()).then(d => { if (!d.user || d.user.role !== 'Administrator') router.push('/login'); });
+    fetch('/api/session').then(r => r.json()).then(d => {
+      if (!d.user || d.user.role !== 'Administrator') router.push('/login');
+    });
     fetchOrders();
   }, [router]);
 

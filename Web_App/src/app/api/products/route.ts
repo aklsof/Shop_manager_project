@@ -5,39 +5,18 @@
  * REQ-1: Product browsing by category.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { RowDataPacket } from 'mysql2';
+import { getCacheFirst } from '@/lib/jsonCache';
+import { loadProductsFromSql } from '@/lib/cacheDatasets';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category');
-
-    let query = `
-      SELECT p.product_id, p.name, p.description, p.img_url, pc.name AS category, p.default_selling_price,
-             p.store_location, p.tax_category_id, p.min_stock_threshold,
-             t.name AS tax_category_name, t.rate AS tax_rate,
-             COALESCE(v.effective_price, p.default_selling_price) AS effective_price,
-             v.promotional_price, v.rule_type, v.has_active_deal,
-             COALESCE(SUM(il.quantity), 0) AS total_stock
-      FROM products p
-      JOIN product_categories pc ON pc.category_id = p.category_id
-      JOIN tax_categories t ON t.tax_category_id = p.tax_category_id
-      LEFT JOIN vw_active_price v ON v.product_id = p.product_id
-      LEFT JOIN inventory_lots il ON il.product_id = p.product_id
-    `;
-    const params: string[] = [];
-
+    const products = await getCacheFirst('products', loadProductsFromSql);
     if (category && category !== 'All') {
-      query += ' WHERE pc.name = ?';
-      params.push(category);
+      return NextResponse.json(products.filter((p) => p.category === category));
     }
-
-    query += ' GROUP BY p.product_id, p.name, p.description, p.img_url, pc.name, p.default_selling_price, p.store_location, p.tax_category_id, p.min_stock_threshold, t.name, t.rate, v.effective_price, v.promotional_price, v.rule_type, v.has_active_deal';
-    query += ' ORDER BY COALESCE(v.has_active_deal, 0) DESC, pc.name, p.name';
-
-    const [rows] = await pool.query<RowDataPacket[]>(query, params);
-    return NextResponse.json(rows);
+    return NextResponse.json(products);
   } catch (err) {
     console.error('Products fetch error:', err);
     return NextResponse.json({ error: 'Failed to fetch products.' }, { status: 500 });

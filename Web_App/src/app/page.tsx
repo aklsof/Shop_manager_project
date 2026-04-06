@@ -35,7 +35,10 @@ export default function HomePage() {
     const url = category === 'All' ? '/api/products' : `/api/products?category=${encodeURIComponent(category)}`;
     fetch(url)
       .then(r => r.json())
-      .then(data => { setProducts(Array.isArray(data) ? data : []); setLoading(false); })
+      .then(data => {
+        setProducts(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [category]);
 
