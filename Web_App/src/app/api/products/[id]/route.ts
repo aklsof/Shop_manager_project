@@ -10,13 +10,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT p.product_id, p.name, p.description, p.img_url, p.category, p.default_selling_price,
+      `SELECT p.product_id, p.name, p.description, p.img_url, pc.name AS category, p.default_selling_price,
               p.store_location, p.tax_category_id, p.min_stock_threshold,
               t.name AS tax_category_name, t.rate AS tax_rate,
               COALESCE(v.effective_price, p.default_selling_price) AS effective_price,
               v.promotional_price, v.rule_type, v.has_active_deal,
               COALESCE(SUM(il.quantity), 0) AS total_stock
        FROM products p
+       JOIN product_categories pc ON pc.category_id = p.category_id
        JOIN tax_categories t ON t.tax_category_id = p.tax_category_id
        LEFT JOIN vw_active_price v ON v.product_id = p.product_id
        LEFT JOIN inventory_lots il ON il.product_id = p.product_id
