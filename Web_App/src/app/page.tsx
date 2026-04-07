@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Product } from '@/lib/types';
 import { useLang } from '@/lib/i18n';
+import { useTheme } from '@/lib/theme';
 
 
 export default function HomePage() {
@@ -16,6 +17,7 @@ export default function HomePage() {
   const [cart, setCart] = useState<{ [id: number]: number }>({});
   const router = useRouter();
   const { t } = useLang();
+  const { fmt } = useTheme();
 
   // Load cart from sessionStorage
   useEffect(() => {
@@ -108,9 +110,9 @@ export default function HomePage() {
                   <h3>{product.name}</h3>
                   <p className="product-category">{product.category}</p>
                   <div className="price-row">
-                    <span className="price">{Number(product.effective_price).toFixed(2)} DA</span>
+                    <span className="price">{fmt(Number(product.effective_price))}</span>
                     {product.has_active_deal ? (
-                      <span className="original-price">{Number(product.default_selling_price).toFixed(2)} DA</span>
+                      <span className="original-price">{fmt(Number(product.default_selling_price))}</span>
                     ) : null}
                   </div>
                   <p className="stock-info">

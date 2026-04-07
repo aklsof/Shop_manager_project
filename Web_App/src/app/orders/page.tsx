@@ -5,11 +5,13 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { WebOrder } from '@/lib/types';
 import { useLang } from '@/lib/i18n';
+import { useTheme } from '@/lib/theme';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<WebOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useLang();
+  const { fmt } = useTheme();
 
   useEffect(() => {
     fetch('/api/orders')
@@ -51,7 +53,7 @@ export default function OrdersPage() {
                 <div className="order-item-row">
                   <span>{(order as unknown as Record<string, unknown>).product_name as string}</span>
                   <span>×{(order as unknown as Record<string, unknown>).quantity as number}</span>
-                  <span>{Number((order as unknown as Record<string, unknown>).price_at_order).toFixed(2)} DA</span>
+                  <span>{fmt(Number((order as unknown as Record<string, unknown>).price_at_order))}</span>
                 </div>
               </div>
             ))}

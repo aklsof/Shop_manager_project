@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Product, TaxCategory, ProductCategory } from '@/lib/types';
+import { useTheme } from '@/lib/theme';
 
 const EMPTY_FORM = {
   name: '',
@@ -19,6 +20,7 @@ const EMPTY_FORM = {
 
 export default function AdminProductsPage() {
   const router = useRouter();
+  const { fmt } = useTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [taxCats, setTaxCats] = useState<TaxCategory[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -350,7 +352,7 @@ export default function AdminProductsPage() {
                 <td>{p.name}</td>
                 <td style={{ maxWidth: 200, whiteSpace: 'pre-wrap' }}>{p.description || '—'}</td>
                 <td>{p.category}</td>
-                <td>{Number(p.default_selling_price).toFixed(2)} DA</td>
+                <td>{fmt(Number(p.default_selling_price))}</td>
                 <td>{p.tax_category_name} ({p.tax_rate}%)</td>
                 <td>{p.store_location || '—'}</td>
                 <td>{p.total_stock ?? 0}</td>

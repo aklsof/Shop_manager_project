@@ -46,6 +46,7 @@ export default function AdminDashboard() {
     { href: '/admin/statistics', label: '📈 Statistics', desc: 'Daily, monthly & yearly analytics' },
     { href: '/admin/reports', label: '📊 Reports', desc: 'Revenue & profit' },
     { href: '/admin/tax-categories', label: '🧾 Tax', desc: 'Tax categories' },
+    { href: '/admin/settings', label: '⚙️ Settings', desc: 'Currency & theme' },
   ];
 
   return (

@@ -6,10 +6,12 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { CartItem, Product } from '@/lib/types';
 import { useLang } from '@/lib/i18n';
+import { useTheme } from '@/lib/theme';
 
 export default function CartPage() {
   const router = useRouter();
   const { t } = useLang();
+  const { fmt } = useTheme();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -97,12 +99,12 @@ export default function CartPage() {
                     <span className="qty">{item.quantity}</span>
                     <button className="qty-btn" onClick={() => updateQty(item.product_id, 1)}>+</button>
                   </div>
-                  <div className="cart-item-price">{(item.effective_price * item.quantity).toFixed(2)} DA</div>
+                  <div className="cart-item-price">{fmt(item.effective_price * item.quantity)}</div>
                 </div>
               ))}
             </div>
             <div className="cart-total">
-              <strong>{t('order_total')}: {total.toFixed(2)} DA</strong>
+              <strong>{t('order_total')}: {fmt(total)}</strong>
             </div>
             <button className="btn-checkout" onClick={handleCheckout} disabled={loading}>
               {loading ? t('placing_order') : `📦 ${t('place_order')}`}

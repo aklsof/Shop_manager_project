@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useTheme } from '@/lib/theme';
 
 interface POSProduct {
   product_id: number;
@@ -17,6 +18,7 @@ interface POSProduct {
 
 export default function POSTerminalPage() {
   const router = useRouter();
+  const { fmt } = useTheme();
   const [products, setProducts] = useState<POSProduct[]>([]);
   const [cart, setCart] = useState<{ product_id: number; name: string; quantity: number; price: number; tax_rate: number }[]>([]);
   const [search, setSearch] = useState('');
@@ -111,7 +113,7 @@ export default function POSTerminalPage() {
                   <div key={p.product_id} className={`product-tile ${p.total_stock <= 0 ? 'out-of-stock' : ''}`} onClick={() => addToCart(p)}>
                     <div className="tile-name">{p.product_name}</div>
                     <div className="tile-category">{p.category}</div>
-                    <div className="tile-price"><strong>{Number(p.effective_price).toFixed(2)} DA</strong></div>
+                    <div className="tile-price"><strong>{fmt(Number(p.effective_price))}</strong></div>
                     <div className="tile-stock">Qty: {p.total_stock}</div>
                     {p.has_active_deal === 1 && <span className="deal-star">★</span>}
                   </div>
@@ -136,7 +138,7 @@ export default function POSTerminalPage() {
                           value={i.quantity} 
                           onChange={(e) => updateCartQuantity(i.product_id, parseInt(e.target.value) || 0)}
                         />
-                        <span>x {i.price.toFixed(2)} DA</span>
+                        <span>x {fmt(i.price)}</span>
                       </div>
                     </div>
                     <div className="cart-row-actions">
@@ -147,9 +149,9 @@ export default function POSTerminalPage() {
              </div>
 
              <div className="cart-summary">
-                <div className="summary-line"><span>Subtotal</span><span>{subtotal.toFixed(2)} DA</span></div>
-                <div className="summary-line"><span>Tax</span><span>{totalTax.toFixed(2)} DA</span></div>
-                <div className="summary-line total-line"><span>Total</span><span>{total.toFixed(2)} DA</span></div>
+                <div className="summary-line"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
+                <div className="summary-line"><span>Tax</span><span>{fmt(totalTax)}</span></div>
+                <div className="summary-line total-line"><span>Total</span><span>{fmt(total)}</span></div>
              </div>
 
              <button className="btn btn-primary btn-full checkout-btn" disabled={cart.length === 0 || processing} onClick={handleCheckout}>

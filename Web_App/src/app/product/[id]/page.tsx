@@ -5,10 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Product } from '@/lib/types';
+import { useTheme } from '@/lib/theme';
 
 export default function ProductPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { fmt } = useTheme();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
@@ -58,9 +60,9 @@ export default function ProductPage() {
             <p style={{ color: '#475569', marginBottom: 12, lineHeight: 1.6 }}>{product.description}</p>
           )}
           <div className="price-row">
-            <span className="price price-lg">{Number(product.effective_price).toFixed(2)} DA</span>
+            <span className="price price-lg">{fmt(Number(product.effective_price))}</span>
             {product.has_active_deal
-              ? <span className="original-price">Was {Number(product.default_selling_price).toFixed(2)} DA</span>
+              ? <span className="original-price">Was {fmt(Number(product.default_selling_price))}</span>
               : null}
           </div>
           <div className="product-meta">

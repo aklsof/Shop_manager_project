@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Product, InventoryLot } from '@/lib/types';
+import { useTheme } from '@/lib/theme';
 
 export default function AdminStockPage() {
   const router = useRouter();
+  const { fmt } = useTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [lots, setLots] = useState<InventoryLot[]>([]);
   const [form, setForm] = useState({ product_id: '', buying_price: '', quantity: '' });
@@ -69,7 +71,7 @@ export default function AdminStockPage() {
                 <td>{l.product_name}</td>
                 <td>{l.category}</td>
                 <td>{l.quantity}</td>
-                <td>{Number(l.buying_price).toFixed(2)} DA</td>
+                <td>{fmt(Number(l.buying_price))}</td>
                 <td>{new Date(l.date_received).toLocaleString()}</td>
               </tr>
             ))}

@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Product, PriceRule } from '@/lib/types';
+import { useTheme } from '@/lib/theme';
 
 export default function AdminPriceRulesPage() {
   const router = useRouter();
+  const { fmt } = useTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [rules, setRules] = useState<PriceRule[]>([]);
   const [form, setForm] = useState({ product_id: '', rule_type: 'Deal', promotional_price: '', start_date: '', end_date: '', is_active: true });
@@ -127,7 +129,7 @@ export default function AdminPriceRulesPage() {
               <tr key={r.rule_id} className={editingRuleId === r.rule_id ? 'editing-row' : ''}>
                 <td>{r.product_name}</td>
                 <td><span className="deal-badge">{r.rule_type}</span></td>
-                <td>{Number(r.promotional_price).toFixed(2)} DA</td>
+                <td>{fmt(Number(r.promotional_price))}</td>
                 <td>{new Date(r.start_date).toLocaleString()}</td>
                 <td>{new Date(r.end_date).toLocaleString()}</td>
                 <td>{r.is_active ? '✅' : '❌'}</td>

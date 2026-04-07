@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { FinancialReport } from '@/lib/types';
+import { useTheme } from '@/lib/theme';
 
 interface Totals { revenue: number; cogs: number; tax_collected: number; net_profit: number; }
 
@@ -15,6 +16,7 @@ export default function AdminReportsPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [loading, setLoading] = useState(false);
+  const { fmt } = useTheme();
 
   useEffect(() => {
     fetch('/api/session').then(r => r.json()).then(d => { if (!d.user || d.user.role !== 'Administrator') router.push('/login'); else loadReport(); });
@@ -26,8 +28,6 @@ export default function AdminReportsPage() {
     if (from && to) url += `?from=${from}&to=${to}`;
     fetch(url).then(r => r.json()).then(data => { setRows(data.rows || []); setTotals(data.totals || null); setLoading(false); });
   }
-
-  const fmt = (n: number) => Number(n).toFixed(2);
 
   return (
     <>
@@ -48,10 +48,10 @@ export default function AdminReportsPage() {
         {/* Totals summary */}
         {totals && (
           <div className="report-summary">
-            <div className="summary-card"><div className="summary-label">Total Revenue</div><div className="summary-value revenue">{fmt(totals.revenue)} DA</div></div>
-            <div className="summary-card"><div className="summary-label">Total COGS</div><div className="summary-value cogs">{fmt(totals.cogs)} DA</div></div>
-            <div className="summary-card"><div className="summary-label">Tax Collected</div><div className="summary-value">{fmt(totals.tax_collected)} DA</div></div>
-            <div className="summary-card"><div className="summary-label">Net Profit</div><div className="summary-value profit" style={{ color: totals.net_profit >= 0 ? '#27ae60' : '#c0392b' }}>{fmt(totals.net_profit)} DA</div></div>
+            <div className="summary-card"><div className="summary-label">Total Revenue</div><div className="summary-value revenue">{fmt(totals.revenue)}</div></div>
+            <div className="summary-card"><div className="summary-label">Total COGS</div><div className="summary-value cogs">{fmt(totals.cogs)}</div></div>
+            <div className="summary-card"><div className="summary-label">Tax Collected</div><div className="summary-value">{fmt(totals.tax_collected)}</div></div>
+            <div className="summary-card"><div className="summary-label">Net Profit</div><div className="summary-value profit" style={{ color: totals.net_profit >= 0 ? '#27ae60' : '#c0392b' }}>{fmt(totals.net_profit)}</div></div>
           </div>
         )}
 
@@ -68,10 +68,10 @@ export default function AdminReportsPage() {
                     <td>{r.category}</td>
                     <td>{r.units_sold}</td>
                     <td>{r.units_refunded}</td>
-                    <td>{fmt(r.revenue)} DA</td>
-                    <td>{fmt(r.cogs)} DA</td>
-                    <td>{fmt(r.tax_collected)} DA</td>
-                    <td style={{ color: r.net_profit >= 0 ? '#27ae60' : '#c0392b', fontWeight: 700 }}>{fmt(r.net_profit)} DA</td>
+                    <td>{fmt(r.revenue)}</td>
+                    <td>{fmt(r.cogs)}</td>
+                    <td>{fmt(r.tax_collected)}</td>
+                    <td style={{ color: r.net_profit >= 0 ? '#27ae60' : '#c0392b', fontWeight: 700 }}>{fmt(r.net_profit)}</td>
                   </tr>
                 ))}
             </tbody>

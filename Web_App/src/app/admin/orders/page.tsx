@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useTheme } from '@/lib/theme';
 
 interface WebOrder {
   order_id: number;
@@ -19,6 +20,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<WebOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+  const { fmt } = useTheme();
 
   useEffect(() => {
     fetch('/api/session').then(r => r.json()).then(d => {
@@ -95,7 +97,7 @@ export default function AdminOrdersPage() {
                         ))}
                       </div>
                     </td>
-                    <td><strong>{Number(o.total).toFixed(2)} DA</strong></td>
+                    <td><strong>{fmt(Number(o.total))}</strong></td>
                     <td>
                        <span className={`status-badge status-${o.status.toLowerCase().replace(/ /g, '-')}`}>
                          {o.status}

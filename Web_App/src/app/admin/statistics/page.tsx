@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useTheme } from '@/lib/theme';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface SeriesRow {
@@ -276,7 +277,7 @@ function drawDonutChart(canvas: HTMLCanvasElement, items: { label: string; value
   ctx.font = 'bold 13px Inter, system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(fmtShort(total) + ' DA', cx, cy);
+  ctx.fillText(fmtShort(total), cx, cy);
 
   // Legend
   const legStartY = cy + r + 18;
@@ -300,13 +301,10 @@ function fmtShort(n: number): string {
   return sign + abs.toFixed(0);
 }
 
-function fmt(n: number): string {
-  return Number(n).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
-// ── Main page component ───────────────────────────────────────────────────────
 export default function StatisticsPage() {
   const router = useRouter();
+  const { fmt } = useTheme();
   const [period, setPeriod] = useState<Period>('monthly');
   const [series, setSeries] = useState<SeriesRow[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
@@ -394,9 +392,9 @@ export default function StatisticsPage() {
 
   const kpis = totals
     ? [
-        { icon: '💰', label: 'Total Revenue (Sales)', value: `${fmt(totals.total_sales)} DA`, color: 'kpi-green', delta: null },
-        { icon: '🛒', label: 'Total Purchases (COGS)', value: `${fmt(totals.total_cogs)} DA`, color: 'kpi-red', delta: null },
-        { icon: '📈', label: 'Net Profit (Bénéfice)', value: `${fmt(totals.net_profit)} DA`, color: totals.net_profit >= 0 ? 'kpi-blue' : 'kpi-red', delta: null },
+        { icon: '💰', label: 'Total Revenue (Sales)', value: fmt(totals.total_sales), color: 'kpi-green', delta: null },
+        { icon: '🛒', label: 'Total Purchases (COGS)', value: fmt(totals.total_cogs), color: 'kpi-red', delta: null },
+        { icon: '📈', label: 'Net Profit (Bénéfice)', value: fmt(totals.net_profit), color: totals.net_profit >= 0 ? 'kpi-blue' : 'kpi-red', delta: null },
         { icon: '🧾', label: 'Transactions', value: totals.total_tx.toString(), color: 'kpi-slate', delta: null },
         { icon: '↩️', label: 'Refunds', value: totals.total_refunds.toString(), color: 'kpi-slate', delta: null },
         { icon: '📦', label: 'Units Sold', value: totals.total_units_sold.toString(), color: 'kpi-slate', delta: null },
@@ -523,9 +521,9 @@ export default function StatisticsPage() {
                       series.map((row, i) => (
                         <tr key={i}>
                           <td><strong>{row.period_label}</strong></td>
-                          <td className="td-green">{fmt(Number(row.total_sales))} DA</td>
-                          <td className="td-red">{fmt(Number(row.total_cogs))} DA</td>
-                          <td className={Number(row.net_profit) >= 0 ? 'td-blue' : 'td-red'}>{fmt(Number(row.net_profit))} DA</td>
+                          <td className="td-green">{fmt(Number(row.total_sales))}</td>
+                          <td className="td-red">{fmt(Number(row.total_cogs))}</td>
+                          <td className={Number(row.net_profit) >= 0 ? 'td-blue' : 'td-red'}>{fmt(Number(row.net_profit))}</td>
                           <td>{row.total_tx}</td>
                           <td>{row.total_refunds}</td>
                         </tr>
@@ -552,7 +550,7 @@ export default function StatisticsPage() {
                           <div className="top-product-header">
                             <span className="top-product-rank">#{i + 1}</span>
                             <span className="top-product-name">{p.product_name}</span>
-                            <span className="top-product-rev">{fmtShort(Number(p.revenue))} DA</span>
+                            <span className="top-product-rev">{fmtShort(Number(p.revenue))}</span>
                           </div>
                           <div className="top-product-bar-bg">
                             <div

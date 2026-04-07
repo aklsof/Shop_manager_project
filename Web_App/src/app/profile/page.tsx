@@ -5,6 +5,8 @@ import { IUser } from '@/lib/user';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLang, LangCode } from '@/lib/i18n';
+import { useTheme } from '@/lib/theme';
+import { THEME_CATALOGUE, UserVisualPrefs } from '@/lib/settings';
 
 const LANG_NAMES: Record<LangCode, Record<LangCode, string>> = {
   en: { en: 'English', fr: 'Anglais', ar: 'الإنجليزية' },
@@ -18,6 +20,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const { t, lang } = useLang();
+  const { userPrefs, setUserPrefs, theme: activeTheme } = useTheme();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -213,6 +216,67 @@ export default function ProfilePage() {
                       </div>
                     </>
                   )}
+                </div>
+              </div>
+
+              {/* ── Visual Preferences Panel ── */}
+              <div className="panel panel-profile panel-default" style={{ marginTop: '1.5rem' }}>
+                <div className="panel-heading">🎨 Visual Preferences</div>
+                <div className="panel-body">
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                    Personalize how the site looks for you. These settings are saved locally in your browser.
+                  </p>
+
+                  <div className="settings-section" style={{ marginBottom: '1.5rem' }}>
+                    <h2 style={{ fontSize: '0.95rem' }}>Theme</h2>
+                    <div className="theme-grid">
+                      {THEME_CATALOGUE.map((t) => {
+                        const accentColor = t.vars['--accent'];
+                        const bgColor = t.vars['--bg'];
+                        const isActive = (userPrefs.theme || activeTheme.key) === t.key;
+                        return (
+                          <button
+                            key={t.key}
+                            className={`theme-card${isActive ? ' active' : ''}`}
+                            onClick={() => setUserPrefs({ theme: t.key })}
+                            style={{
+                              background: bgColor,
+                              borderColor: isActive ? accentColor : undefined,
+                              color: t.vars['--text'],
+                            }}
+                          >
+                            <span style={{
+                              display: 'inline-block', width: 12, height: 12,
+                              borderRadius: '50%', background: accentColor,
+                              marginRight: 6, verticalAlign: 'middle',
+                            }} />
+                            {t.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="settings-section" style={{ marginBottom: 0 }}>
+                    <h2 style={{ fontSize: '0.95rem' }}>Text Size</h2>
+                    <div className="font-size-group">
+                      {([
+                        { key: 'sm' as UserVisualPrefs['fontSize'], label: 'A', title: 'Small' },
+                        { key: 'md' as UserVisualPrefs['fontSize'], label: 'A', title: 'Medium', style: { fontSize: '1.1em' } },
+                        { key: 'lg' as UserVisualPrefs['fontSize'], label: 'A', title: 'Large', style: { fontSize: '1.25em' } },
+                      ]).map(({ key, label, title, style }) => (
+                        <button
+                          key={key}
+                          title={title}
+                          className={`font-size-btn${userPrefs.fontSize === key ? ' active' : ''}`}
+                          onClick={() => setUserPrefs({ fontSize: key })}
+                          style={style}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

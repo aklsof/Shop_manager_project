@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { LanguageProvider } from '@/lib/i18n';
 import LangHtmlSync from '@/components/LangHtmlSync';
+import { ThemeProvider } from '@/lib/theme';
 
 export const metadata: Metadata = {
   title: 'AKLSOF Network',
@@ -17,9 +18,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <LanguageProvider>
-          {/* Syncs html[lang] and html[dir] to the active language */}
-          <LangHtmlSync />
-          {children}
+          <ThemeProvider>
+            {/* Syncs html[lang] and html[dir] to the active language */}
+            <LangHtmlSync />
+            {children}
+          </ThemeProvider>
         </LanguageProvider>
       </body>
     </html>
