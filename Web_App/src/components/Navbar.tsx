@@ -11,8 +11,13 @@ const LANG_OPTIONS: { code: LangCode; label: string }[] = [
 ];
 
 export default function Navbar() {
+  // `null`  = guest / not yet fetched
+  // `IUser` = logged-in user
   const [user, setUser] = useState<IUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  // `sessionLoaded` becomes true as soon as we know whether the user is
+  // logged-in or not.  We intentionally do NOT hide the auth buttons while
+  // waiting — they stay visible until we confirm the user IS logged in.
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const { t, lang, setLang } = useLang();
 
@@ -21,9 +26,12 @@ export default function Navbar() {
       .then((r) => r.json())
       .then((data) => {
         setUser(data.user || null);
-        setLoading(false);
+        setSessionLoaded(true);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        // Network error on Render cold start — treat as guest
+        setSessionLoaded(true);
+      });
   }, []);
 
   async function handleLogout() {
@@ -98,23 +106,32 @@ export default function Navbar() {
                 ))}
               </li>
 
-              {!loading && (
-                user ? (
-                  <>
-                    <li className="nav-item">
-                      <a className="nav-link" href="/profile">{user.username}</a>
-                    </li>
-                    <li className="nav-item">
-                      <button
-                        className="nav-link btn btn-link"
-                        onClick={handleLogout}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {t('nav_logout')}
-                      </button>
-                    </li>
-                  </>
-                ) : (
+              {/*
+               * Auth section logic:
+               *  - BEFORE session loads: show Login + Register (safe default for guests)
+               *  - AFTER session loads AND user is set: show username + Logout
+               *  - AFTER session loads AND no user: show Login + Register
+               *
+               * This ensures buttons are ALWAYS visible — no invisible loading state.
+               */}
+              {user && sessionLoaded ? (
+                <>
+                  <li className="nav-item">
+                    <a className="nav-link" href="/profile">{user.username}</a>
+                  </li>
+                  <li className="nav-item">
+                    <button
+                      className="nav-link btn btn-link"
+                      onClick={handleLogout}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {t('nav_logout')}
+                    </button>
+                  </li>
+                </>
+              ) : (
+                /* Show Login/Register while loading OR when guest */
+                !user && (
                   <>
                     <li className="nav-item">
                       <a className="nav-link" href="/login">{t('nav_login')}</a>

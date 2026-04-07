@@ -170,29 +170,56 @@ const LangContext = createContext<LangContextValue>({
   dir: 'ltr',
 });
 
+const LS_KEY = 'aklsof_lang';
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<LangCode>('en');
+  /**
+   * Initialisation order (highest → lowest priority):
+   *   1. localStorage  — persists explicit user switch across navigations
+   *   2. /api/session  — logged-in user's DB preference (updates localStorage)
+   *   3. navigator.language — browser locale for first-time guests
+   *   4. 'en' fallback
+   *
+   * Reading localStorage in the useState initialiser avoids the one-frame
+   * flash where the whole UI appears in 'en' before the effect fires.
+   */
+  const [lang, setLangState] = useState<LangCode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) return normalise(saved);
+    }
+    return 'en'; // SSR default; browser locale applied in the effect below
+  });
 
   useEffect(() => {
-    // Try to get the session user's preferred_lang first
+    // On mount, apply browser locale if localStorage had nothing
+    if (!localStorage.getItem(LS_KEY)) {
+      setLangState(detectBrowserLang());
+    }
+
+    // Then try to honour the logged-in user's stored preference
     fetch('/api/session')
       .then((r) => r.json())
       .then((data) => {
         const preferred = data?.user?.preferred_lang;
         if (preferred) {
-          setLangState(normalise(preferred));
-        } else {
-          // Fall back to browser locale for guests
-          setLangState(detectBrowserLang());
+          const code = normalise(preferred);
+          setLangState(code);
+          localStorage.setItem(LS_KEY, code);
         }
       })
       .catch(() => {
-        setLangState(detectBrowserLang());
+        // Network error / cold start — localStorage already applied above
       });
   }, []);
 
+  /** Persist every explicit language switch so it survives navigation. */
   const setLang = useCallback((code: LangCode) => {
-    setLangState(normalise(code));
+    const normalised = normalise(code);
+    setLangState(normalised);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LS_KEY, normalised);
+    }
   }, []);
 
   const t = useCallback(
