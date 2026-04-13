@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { LowStockAlert } from '@/lib/types';
+import { useLang } from '@/lib/i18n';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { t } = useLang();
   const [alerts, setAlerts] = useState<LowStockAlert[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,25 +37,25 @@ export default function AdminDashboard() {
   }, [router]);
 
   const adminLinks = [
-    { href: '/admin/pos', label: '💻 POS Terminal', desc: 'Process local sales & checkout' },
-    { href: '/admin/orders', label: '🌐 Web Orders', desc: 'Ready pickups & complete orders' },
-    { href: '/admin/products', label: '📦 Products', desc: 'Add & manage products' },
-    { href: '/admin/categories', label: '🗂️ Categories', desc: 'Manage product categories' },
-    { href: '/admin/stock', label: '📥 Stock', desc: 'Receive new inventory' },
-    { href: '/admin/adjustments', label: '🔧 Adjustments', desc: 'Shrinkage & damage' },
-    { href: '/admin/price-rules', label: '🏷️ Price Rules', desc: 'Deals & promotions' },
-    { href: '/admin/users', label: '👥 Users', desc: 'Manage staff accounts' },
-    { href: '/admin/statistics', label: '📈 Statistics', desc: 'Daily, monthly & yearly analytics' },
-    { href: '/admin/reports', label: '📊 Reports', desc: 'Revenue & profit' },
-    { href: '/admin/tax-categories', label: '🧾 Tax', desc: 'Tax categories' },
-    { href: '/admin/settings', label: '⚙️ Settings', desc: 'Currency & theme' },
+    { href: '/admin/pos', label: t('pos_terminal'), desc: t('pos_desc') },
+    { href: '/admin/orders', label: t('web_orders'), desc: t('web_orders_desc') },
+    { href: '/admin/products', label: t('products_mgmt'), desc: t('products_desc') },
+    { href: '/admin/categories', label: t('categories_mgmt'), desc: t('categories_desc') },
+    { href: '/admin/stock', label: t('stock_mgmt'), desc: t('stock_desc') },
+    { href: '/admin/adjustments', label: t('adjustments_mgmt'), desc: t('adjustments_desc') },
+    { href: '/admin/price-rules', label: t('price_rules'), desc: t('price_rules_desc') },
+    { href: '/admin/users', label: t('users_mgmt'), desc: t('users_desc') },
+    { href: '/admin/statistics', label: t('statistics'), desc: t('statistics_desc') },
+    { href: '/admin/reports', label: t('reports'), desc: t('reports_desc') },
+    { href: '/admin/tax-categories', label: t('tax_categories'), desc: t('tax_categories_desc') },
+    { href: '/admin/settings', label: t('settings_mgmt'), desc: t('settings_desc') },
   ];
 
   return (
     <>
       <Navbar />
       <div className="admin-container">
-        <h1 className="admin-title">Admin Dashboard</h1>
+        <h1 className="admin-title">{t('admin_dashboard')}</h1>
 
         {/* Quick nav */}
         <div className="admin-grid">
@@ -66,15 +68,15 @@ export default function AdminDashboard() {
         </div>
 
         {/* Low stock alerts */}
-        <h2 className="section-title">⚠️ Low Stock Alerts</h2>
+        <h2 className="section-title">{t('low_stock_alerts')}</h2>
         {loading ? (
-          <p>Loading…</p>
+          <p>{t('loading')}</p>
         ) : alerts.length === 0 ? (
-          <p className="empty-state">All products are adequately stocked.</p>
+          <p className="empty-state">{t('all_stocked')}</p>
         ) : (
           <table className="admin-table">
             <thead>
-              <tr><th>Product</th><th>Category</th><th>Location</th><th>Stock</th><th>Min Threshold</th><th>Shortage</th></tr>
+              <tr><th>{t('product_name')}</th><th>{t('category')}</th><th>{t('location')}</th><th>{t('stock')}</th><th>{t('min_threshold')}</th><th>{t('shortage')}</th></tr>
             </thead>
             <tbody>
               {alerts.map(a => (

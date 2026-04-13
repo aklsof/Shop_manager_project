@@ -110,10 +110,18 @@ const translations: Record<string, Record<LangCode, string>> = {
 
   // ── Product detail ────────────────────────────────────────────────────
   back:               { en: '← Back',      fr: '← Retour',       ar: '← رجوع' },
+  back_to_shop:       { en: '← Back to Shop', fr: '← Retour à la boutique', ar: '← العودة للمتجر' },
   description:        { en: 'Description', fr: 'Description',    ar: 'الوصف' },
   price:              { en: 'Price',        fr: 'Prix',           ar: 'السعر' },
   category:           { en: 'Category',     fr: 'Catégorie',      ar: 'الفئة' },
   no_description:     { en: 'No description available.', fr: 'Aucune description disponible.', ar: 'لا يوجد وصف متاح.' },
+  product_not_found:  { en: 'Product not found.', fr: 'Produit introuvable.', ar: 'المنتج غير موجود.' },
+  was:                { en: 'Was',          fr: 'Ancien',         ar: 'كان' },
+  location:           { en: 'Location:',    fr: 'Emplacement :',  ar: 'الموقع:' },
+  tax:                { en: 'Tax:',         fr: 'Taxe :',         ar: 'الضريبة:' },
+  stock_colon:        { en: 'Stock:',       fr: 'Stock :',        ar: 'المخزون:' },
+  added_to_cart:      { en: '✓ Added to Cart!', fr: '✓ Ajouté au panier !', ar: '✓ تمت الإضافة!' },
+  view_cart:          { en: 'View Cart',    fr: 'Voir le panier', ar: 'عرض السلة' },
 
   // ── Profile ───────────────────────────────────────────────────────────
   profile_title:      { en: 'My Profile',   fr: 'Mon profil',     ar: 'ملفي الشخصي' },
@@ -123,15 +131,43 @@ const translations: Record<string, Record<LangCode, string>> = {
 
   // ── Admin ─────────────────────────────────────────────────────────────
   admin_dashboard:    { en: 'Admin Dashboard', fr: "Tableau de bord admin", ar: 'لوحة التحكم' },
-  products_mgmt:      { en: 'Products',     fr: 'Produits',       ar: 'المنتجات' },
-  categories_mgmt:    { en: 'Categories',   fr: 'Catégories',     ar: 'الفئات' },
-  users_mgmt:         { en: 'Users',        fr: 'Utilisateurs',   ar: 'المستخدمون' },
-  statistics:         { en: 'Statistics',   fr: 'Statistiques',   ar: 'الإحصائيات' },
-  reports:            { en: 'Reports',      fr: 'Rapports',       ar: 'التقارير' },
+  low_stock_alerts:   { en: '⚠️ Low Stock Alerts', fr: '⚠️ Alertes de stock bas', ar: '⚠️ تنبيهات نقص المخزون' },
+  all_stocked:        { en: 'All products are adequately stocked.', fr: 'Tous les produits sont suffisamment en stock.', ar: 'جميع المنتجات متوفرة بشكل كافٍ.' },
+  min_threshold:      { en: 'Min Threshold', fr: 'Seuil Min',     ar: 'الحد الأدنى' },
+  shortage:           { en: 'Shortage',     fr: 'Manque',         ar: 'النقص' },
+  pos_terminal:       { en: '💻 POS Terminal', fr: '💻 Terminal de point de vente', ar: '💻 نقطة البيع' },
+  pos_desc:           { en: 'Process local sales & checkout', fr: 'Traiter les ventes locales et les encaissements', ar: 'معالجة المبيعات المحلية' },
+  web_orders:         { en: '🌐 Web Orders', fr: '🌐 Commandes Web', ar: '🌐 طلبات الويب' },
+  web_orders_desc:    { en: 'Ready pickups & complete orders', fr: 'Commandes prêtes au retrait et terminées', ar: 'جاهز للاستلام وطلبات مكتملة' },
+  products_mgmt:      { en: '📦 Products',     fr: '📦 Produits',       ar: '📦 المنتجات' },
+  products_desc:      { en: 'Add & manage products', fr: 'Ajouter et gérer des produits', ar: 'إضافة وإدارة المنتجات' },
+  categories_mgmt:    { en: '🗂️ Categories',   fr: '🗂️ Catégories',     ar: '🗂️ الفئات' },
+  categories_desc:    { en: 'Manage product categories', fr: 'Gérer les catégories de produits', ar: 'إدارة فئات المنتجات' },
+  stock_mgmt:         { en: '📥 Stock',       fr: '📥 Stock',          ar: '📥 المخزون' },
+  stock_desc:         { en: 'Receive new inventory', fr: 'Recevoir de nouveaux stocks', ar: 'استلام مخزون جديد' },
+  adjustments_mgmt:   { en: '🔧 Adjustments', fr: '🔧 Ajustements',   ar: '🔧 التعديلات' },
+  adjustments_desc:   { en: 'Shrinkage & damage', fr: 'Pertes et dommages', ar: 'نقص وتلف' },
+  price_rules:        { en: '🏷️ Price Rules', fr: '🏷️ Règles de prix', ar: '🏷️ قواعد الأسعار' },
+  price_rules_desc:   { en: 'Deals & promotions', fr: 'Offres et promotions', ar: 'عروض وتخفيضات' },
+  users_mgmt:         { en: '👥 Users',        fr: '👥 Utilisateurs',   ar: '👥 المستخدمون' },
+  users_desc:         { en: 'Manage staff accounts', fr: 'Gérer les comptes du personnel', ar: 'إدارة حسابات الموظفين' },
+  statistics:         { en: '📈 Statistics',   fr: '📈 Statistiques',   ar: '📈 الإحصائيات' },
+  statistics_desc:    { en: 'Daily, monthly & yearly analytics', fr: 'Analyses quotidiennes, mensuelles et annuelles', ar: 'تحليلات يومية، شهرية وسنوية' },
+  reports:            { en: '📊 Reports',      fr: '📊 Rapports',       ar: '📊 التقارير' },
+  reports_desc:       { en: 'Revenue & profit', fr: 'Revenus et bénéfices', ar: 'الإيرادات والأرباح' },
+  tax_categories:     { en: '🧾 Tax',          fr: '🧾 Taxes',          ar: '🧾 الضرائب' },
+  tax_categories_desc:{ en: 'Tax categories', fr: 'Catégories fiscales', ar: 'فئات الضرائب' },
+  settings_mgmt:      { en: '⚙️ Settings',     fr: '⚙️ Paramètres',     ar: '⚙️ الإعدادات' },
+  settings_desc:      { en: 'Currency & theme', fr: 'Devise et thème', ar: 'العملة والمظهر' },
 
   // ── Generic ───────────────────────────────────────────────────────────
   server_error:       { en: 'Server error. Please try again.', fr: 'Erreur serveur. Veuillez réessayer.', ar: 'خطأ في الخادم. حاول مجدداً.' },
   copyright:          { en: 'Copyright',    fr: 'Droits réservés', ar: 'جميع الحقوق محفوظة' },
+  terms:              { en: 'Terms of Service', fr: 'Conditions d\'utilisation', ar: 'شروط الخدمة' },
+  privacy:            { en: 'Privacy Policy', fr: 'Politique de confidentialité', ar: 'سياسة الخصوصية' },
+  agree_terms:        { en: 'I agree to the Terms of Service and Privacy Policy, and consent to data processing (GDPR, CCPA, PIPEDA, Law 18-07).', fr: 'J\'accepte les Conditions d\'utilisation et la Politique de confidentialité, et je consens au traitement des données (RGPD, CCPA, LPRPDE, Loi 18-07).', ar: 'أوافق على شروط الخدمة وسياسة الخصوصية، وأوافق على معالجة البيانات.' },
+  cookie_consent:     { en: 'We use cookies to ensure you get the best experience on our website according to EU, US, CA and DZ regulations.', fr: 'Nous utilisons des cookies pour vous garantir la meilleure expérience sur notre site.', ar: 'نحن نستخدم ملفات تعريف الارتباط لضمان حصولك على أفضل تجربة.' },
+  accept_cookies:     { en: 'Accept', fr: 'Accepter', ar: 'قبول' },
 };
 
 // ---------------------------------------------------------------------------

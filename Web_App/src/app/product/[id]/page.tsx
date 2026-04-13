@@ -6,11 +6,13 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Product } from '@/lib/types';
 import { useTheme } from '@/lib/theme';
+import { useLang } from '@/lib/i18n';
 
 export default function ProductPage() {
   const { id } = useParams();
   const router = useRouter();
   const { fmt } = useTheme();
+  const { t } = useLang();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
@@ -37,14 +39,14 @@ export default function ProductPage() {
     setTimeout(() => setAdded(false), 2000);
   }
 
-  if (loading) return <><Navbar /><div className="shop-container"><p>Loading…</p></div><Footer /></>;
-  if (!product) return <><Navbar /><div className="shop-container"><p>Product not found.</p></div><Footer /></>;
+  if (loading) return <><Navbar /><div className="shop-container"><p>{t('loading')}</p></div><Footer /></>;
+  if (!product) return <><Navbar /><div className="shop-container"><p>{t('product_not_found')}</p></div><Footer /></>;
 
   return (
     <>
       <Navbar />
       <div className="shop-container">
-        <button className="btn-back" onClick={() => router.push('/')}>← Back to Shop</button>
+        <button className="btn-back" onClick={() => router.push('/')}>{t('back_to_shop')}</button>
         <div className="product-detail-card">
           {product.has_active_deal ? <span className="deal-badge">{product.rule_type}</span> : null}
           {product.img_url && (
@@ -62,16 +64,16 @@ export default function ProductPage() {
           <div className="price-row">
             <span className="price price-lg">{fmt(Number(product.effective_price))}</span>
             {product.has_active_deal
-              ? <span className="original-price">Was {fmt(Number(product.default_selling_price))}</span>
+              ? <span className="original-price">{t('was')} {fmt(Number(product.default_selling_price))}</span>
               : null}
           </div>
           <div className="product-meta">
-            <div><strong>Location:</strong> {product.store_location || 'N/A'}</div>
-            <div><strong>Tax:</strong> {product.tax_category_name} ({product.tax_rate}%)</div>
+            <div><strong>{t('location')}</strong> {product.store_location || 'N/A'}</div>
+            <div><strong>{t('tax')}</strong> {product.tax_category_name} ({product.tax_rate}%)</div>
             <div>
-              <strong>Stock:</strong> {product.total_stock ?? 0}
+              <strong>{t('stock_colon')}</strong> {product.total_stock ?? 0}
               {product.total_stock !== undefined && product.total_stock <= (product.min_stock_threshold || 0)
-                ? <span className="low-stock-badge"> Low Stock</span> : null}
+                ? <span className="low-stock-badge"> {t('low_stock')}</span> : null}
             </div>
           </div>
           <div className="detail-actions">
@@ -80,9 +82,9 @@ export default function ProductPage() {
               onClick={addToCart}
               disabled={!product.total_stock || product.total_stock <= 0}
             >
-              {added ? '✓ Added to Cart!' : !product.total_stock || product.total_stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
+              {added ? t('added_to_cart') : !product.total_stock || product.total_stock <= 0 ? t('out_of_stock') : t('add_to_cart')}
             </button>
-            <button className="btn-view-cart" onClick={() => router.push('/cart')}>View Cart</button>
+            <button className="btn-view-cart" onClick={() => router.push('/cart')}>{t('view_cart')}</button>
           </div>
         </div>
       </div>

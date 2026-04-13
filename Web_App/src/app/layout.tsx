@@ -3,6 +3,7 @@ import './globals.css';
 import { LanguageProvider } from '@/lib/i18n';
 import LangHtmlSync from '@/components/LangHtmlSync';
 import { ThemeProvider } from '@/lib/theme';
+import CookieBanner from '@/components/CookieBanner';
 
 export const metadata: Metadata = {
   title: 'AKLSOF Network',
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Syncs html[lang] and html[dir] to the active language */}
             <LangHtmlSync />
             {children}
+            <CookieBanner />
           </ThemeProvider>
         </LanguageProvider>
       </body>

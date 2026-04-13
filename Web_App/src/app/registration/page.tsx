@@ -21,6 +21,7 @@ export default function RegistrationPage() {
     password: '',
     preferred_lang: lang as string,
   });
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -30,6 +31,10 @@ export default function RegistrationPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!agreed) {
+      setError(t('agree_terms'));
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -122,8 +127,25 @@ export default function RegistrationPage() {
                     </select>
                   </div>
 
+                  <div className="col-sm-12 form-group">
+                    <div className="checkbox" style={{ marginTop: '1rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <input 
+                        type="checkbox" 
+                        id="agree" 
+                        checked={agreed} 
+                        onChange={(e) => setAgreed(e.target.checked)} 
+                        style={{ marginTop: '4px' }}
+                      />
+                      <label htmlFor="agree" style={{ fontWeight: 'normal', fontSize: '0.85rem' }}>
+                        {t('agree_terms')}
+                        <br />
+                        <a href="/terms" target="_blank" style={{ color: '#3498db' }}>{t('terms')}</a> | <a href="/privacy" target="_blank" style={{ color: '#3498db' }}>{t('privacy')}</a>
+                      </label>
+                    </div>
+                  </div>
+
                   <div className="form-group mt-3">
-                    <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                    <button type="submit" className="btn btn-primary w-100" disabled={loading || !agreed}>
                       {loading ? t('registering') : t('register_btn')}
                     </button>
                   </div>
