@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useTheme } from '@/lib/theme';
+import { useLang } from '@/lib/i18n';
 import {
   CURRENCY_OPTIONS,
   THEME_CATALOGUE,
@@ -23,6 +24,7 @@ import {
 export default function AdminSettingsPage() {
   const router = useRouter();
   const { appSettings, reloadAppSettings, theme } = useTheme();
+  const { t } = useLang();
 
   const [currency, setCurrency] = useState<Currency>(appSettings.currency);
   const [defaultTheme, setDefaultTheme] = useState(appSettings.defaultTheme);
@@ -54,14 +56,14 @@ export default function AdminSettingsPage() {
       });
       if (!res.ok) {
         const d = await res.json();
-        setError(d.error || 'Failed to save settings.');
+        setError(d.error || t('settings_err_save'));
       } else {
         await reloadAppSettings();
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
       }
     } catch {
-      setError('Network error. Please try again.');
+      setError(t('settings_err_network'));
     } finally {
       setSaving(false);
     }
@@ -71,16 +73,16 @@ export default function AdminSettingsPage() {
     <>
       <Navbar />
       <div className="admin-container">
-        <h1 className="admin-title">⚙️ Store Settings</h1>
+        <h1 className="admin-title">{t('settings_page_title')}</h1>
 
         {error && <div className="alert alert-danger">{error}</div>}
-        {saved && <div className="alert alert-success">✓ Settings saved successfully!</div>}
+        {saved && <div className="alert alert-success">{t('settings_saved')}</div>}
 
         {/* ── Currency ── */}
         <div className="settings-section">
-          <h2>💱 Currency</h2>
+          <h2>{t('settings_currency_h')}</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-            Select the currency displayed to all customers site-wide.
+            {t('settings_currency_desc')}
           </p>
           <div className="currency-grid">
             {CURRENCY_OPTIONS.map((c) => (
@@ -95,15 +97,15 @@ export default function AdminSettingsPage() {
             ))}
           </div>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-            Preview: <strong>{currency.position === 'before' ? `${currency.symbol}12.99` : `12.99 ${currency.symbol}`}</strong>
+            {t('settings_currency_prev')} <strong>{currency.position === 'before' ? `${currency.symbol}12.99` : `12.99 ${currency.symbol}`}</strong>
           </p>
         </div>
 
         {/* ── Default Theme ── */}
         <div className="settings-section">
-          <h2>🎨 Default Theme</h2>
+          <h2>{t('settings_theme_h')}</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-            This theme applies to all users who have not set a personal preference.
+            {t('settings_theme_desc')}
           </p>
           <div className="theme-grid">
             {THEME_CATALOGUE.map((t) => {
@@ -140,7 +142,7 @@ export default function AdminSettingsPage() {
             onClick={() => router.push('/admin')}
             style={{ padding: '0.6rem 1.5rem' }}
           >
-            ← Back
+            {t('settings_back')}
           </button>
           <button
             className="btn btn-primary"
@@ -148,7 +150,7 @@ export default function AdminSettingsPage() {
             disabled={saving}
             style={{ minWidth: 120 }}
           >
-            {saving ? 'Saving…' : '💾 Save Settings'}
+            {saving ? t('settings_saving') : t('settings_save')}
           </button>
         </div>
       </div>

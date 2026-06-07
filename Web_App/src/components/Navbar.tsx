@@ -8,6 +8,7 @@ const LANG_OPTIONS: { code: LangCode; label: string }[] = [
   { code: 'en', label: 'EN' },
   { code: 'fr', label: 'FR' },
   { code: 'ar', label: 'ع' },
+  { code: 'es', label: 'ES' },
 ];
 
 export default function Navbar() {

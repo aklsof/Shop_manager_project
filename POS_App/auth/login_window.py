@@ -69,7 +69,7 @@ class LoginWindow:
                         padx=4, pady=2, command=self._open_settings)
         settings_btn.pack(side='left', padx=6)
 
-        for lang_code, lang_label in [('en', 'EN'), ('fr', 'FR'), ('ar', 'ع')]:
+        for lang_code, lang_label in [('en', 'EN'), ('fr', 'FR'), ('ar', 'ع'), ('es', 'ES')]:
             btn = tk.Button(lang_frame, text=lang_label, font=("Helvetica", 9, "bold"),
                             bg=COLOR_WHITE if pos_locale.get_lang() == lang_code else COLOR_RED,
                             fg=COLOR_RED if pos_locale.get_lang() == lang_code else COLOR_WHITE,

@@ -5,36 +5,108 @@
             "name": "Nassim",
             "description": "Nassim cigarettes are produced in Algeria, king size (85 mm), soft pack, 20 cigarettes in a pack.",
             "img_url": "https://www.cigarettespedia.com/images/2/2b/Nassim_filtre_ks_20_s_with_vertical_lines_algeria.jpg",
-            "category": "cigarette",
-            "default_selling_price": 200.0,
-            "store_location": null,
+            "default_selling_price": 9.99,
+            "store_location": "Aile 22",
             "tax_category_id": 1,
             "min_stock_threshold": 10,
-            "created_at": "2026-03-30T20:02:05"
+            "created_at": "2026-03-30T20:02:05",
+            "category_id": 1
         },
         {
             "product_id": 2,
-            "name": "Dernier samurai",
+            "name": "Dernier samurai (version francaise)",
             "description": "A test product to verify image display",
             "img_url": "https://m.media-amazon.com/images/I/810n4p3wxUL._AC_UF894,1000_QL80_.jpg",
-            "category": "Drinks",
-            "default_selling_price": 150.0,
+            "default_selling_price": 29.99,
             "store_location": "Aisle 3",
             "tax_category_id": 1,
             "min_stock_threshold": 5,
-            "created_at": "2026-03-31T20:52:28"
+            "created_at": "2026-03-31T20:52:28",
+            "category_id": 2
         },
         {
             "product_id": 3,
             "name": "ships Mahbool",
             "description": "Plant-based foods and beverages, Plant-based foods, Snacks, Cereals and potatoes, Salty snacks, Appetizers, Chips and fries, Crisps, Potato crisps, Salty snacks made from potato",
             "img_url": "https://images.openfoodfacts.org/images/products/613/033/600/2509/front_fr.3.400.jpg",
-            "category": "Ships",
-            "default_selling_price": 20.0,
+            "default_selling_price": 1.99,
             "store_location": "Aile 1",
-            "tax_category_id": 1,
+            "tax_category_id": 2,
             "min_stock_threshold": 10,
-            "created_at": "2026-03-31T22:15:50"
+            "created_at": "2026-03-31T22:15:50",
+            "category_id": 3
+        },
+        {
+            "product_id": 4,
+            "name": "Head and shoulders - 150mL",
+            "description": "Le shampooing antipelliculaire Head & Shoulders Classic offre une efficacité supérieure tout en prenant soin du cuir chevelu. Sa formule 3X Protect* avec de la piroctone olamine agit en profondeur à la source contre trois problèmes du cuir chevelu dès le premier lavage. Cliniquement prouvé et testé dermatologiquement, il offre jusqu'à 100 % de protection contre les pellicules et est idéal pour un usage quotidien. Agit sur 3 problèmes du cuir chevelu dès le 1er lavage: les pellicules, les démangeaisons liées aux pellicules* et l'excès de sébum *avec une utilisation régulière",
+            "img_url": "https://cdn.auchan.fr/media/S01000000041R6SPRIMARY_1024x1024/B2CD/?format=rw&quality=75",
+            "default_selling_price": 4.99,
+            "store_location": "Aile 3",
+            "tax_category_id": 2,
+            "min_stock_threshold": 10,
+            "created_at": "2026-04-06T18:58:07",
+            "category_id": 5
+        },
+        {
+            "product_id": 5,
+            "name": "Head and shoolders classic - 380mL",
+            "description": "Le shampooing antipelliculaire Head & Shoulders Classic offre une efficacité supérieure tout en prenant soin du cuir chevelu. Sa formule 3X Protect * avec du Piroctone Olamine agit en profondeur à la source contre trois problèmes du cuir chevelu dès le premier lavage. cliniquement prouvé et testé dermatologiquement, il offre jusqu'à 100 % de protection contre les pellicules et est idéal pour un usage quotidien. Agit sur 3 problèmes du cuir chevelu dès le 1er lavage: les pellicules, les démangeaisons liées aux pellicules* et l'excès de sébum *avec une utilisation régulière",
+            "img_url": "https://cdn.auchan.fr/media/S01000000041R6SPRIMARY_1024x1024/B2CD/?format=rw&quality=75",
+            "default_selling_price": 6.05,
+            "store_location": "aile 3",
+            "tax_category_id": 2,
+            "min_stock_threshold": 10,
+            "created_at": "2026-04-06T19:01:49",
+            "category_id": 5
+        },
+        {
+            "product_id": 6,
+            "name": "Head and shoolders classic - 700mL",
+            "description": "Le shampooing antipelliculaire Head & Shoulders Classic offre une efficacité supérieure tout en prenant soin du cuir chevelu. Sa formule 3X Protect * avec du Piroctone Olamine agit en profondeur à la source contre trois problèmes du cuir chevelu dès le premier lavage. cliniquement prouvé et testé dermatologiquement, il offre jusqu'à 100 % de protection contre les pellicules et est idéal pour un usage quotidien. Agit sur 3 problèmes du cuir chevelu dès le 1er lavage: les pellicules, les démangeaisons liées aux pellicules* et l'excès de sébum *avec une utilisation régulière",
+            "img_url": "https://cdn.auchan.fr/media/S01000000041R6SPRIMARY_1024x1024/B2CD/?format=rw&quality=75",
+            "default_selling_price": 9.99,
+            "store_location": "aile 3",
+            "tax_category_id": 2,
+            "min_stock_threshold": 10,
+            "created_at": "2026-04-06T19:01:58",
+            "category_id": 5
+        },
+        {
+            "product_id": 7,
+            "name": "Big third grade",
+            "description": "Comprehensive Curriculum: This workbook offers a broad range of subjects including reading, writing, math, science, history, and social science, designed to support third-grade learning.\nSkill Development: Activities focus on sharpening skills such as punctuation, parts of speech, persuasive writing, multiplication, equations, estimating, and symmetry.\nEngaging Activities: The book incorporates fun exercises like timeline creation, possessive pronoun practice, and \"Go For It!\" ideas to make learning enjoyable.",
+            "img_url": "https://i5.walmartimages.com/seo/SCHOOL-ZONE-Big-Third-Grade-Paperback-9781589479265_2d9ab697-17c7-46d8-b2f8-74208d0706be.f27f217b63940e515535e7b07f430ce0.jpeg?odnHeight=573&odnWidth=573&odnBg=FFFFFF",
+            "default_selling_price": 12.99,
+            "store_location": "aile 3",
+            "tax_category_id": 2,
+            "min_stock_threshold": 10,
+            "created_at": "2026-04-06T19:07:43",
+            "category_id": 2
+        },
+        {
+            "product_id": 8,
+            "name": "Le dernier samurai",
+            "description": "Livre ligendaire",
+            "img_url": "https://m.media-amazon.com/images/I/810n4p3wxUL._AC_UF894,1000_QL80_.jpg",
+            "default_selling_price": 25.99,
+            "store_location": "A3",
+            "tax_category_id": 2,
+            "min_stock_threshold": 10,
+            "created_at": "2026-04-06T19:13:18",
+            "category_id": 2
+        },
+        {
+            "product_id": 9,
+            "name": "32 deapers ",
+            "description": "Huggies Size 1 Diapers, Little Snugglers Baby Diapers, Size 1 (8-14 lbs), 32 Count. ",
+            "img_url": "https://m.media-amazon.com/images/I/81G-zDnOn4L._AC_AIweblab1006854,T4_FMavif_SF1050,1050_PQ64_.jpg?aicid=detailPage-mediaBlock",
+            "default_selling_price": 9.99,
+            "store_location": "Aile 5",
+            "tax_category_id": 1,
+            "min_stock_threshold": 0,
+            "created_at": "2026-04-26T16:57:55",
+            "category_id": 2
         }
     ],
     "users": [
@@ -54,6 +126,40 @@
             "preferred_lang": "en",
             "is_active": 1,
             "created_at": "2026-04-04T15:50:14"
+        },
+        {
+            "user_id": 3,
+            "username": "Sabrina",
+            "email": "sabrinachenane89@students.highline.edu",
+            "user_firstName": "Sab",
+            "user_lastName": "Rina",
+            "user_address1": "123",
+            "city": "Des moines",
+            "province": "Wa",
+            "password_hash": "$2b$10$tUQFRHQoISEAC39Tlp3qfeVDOJ4JsdMuvRbmgATBApdxLcnVNMfYS",
+            "pin_hash": null,
+            "role": null,
+            "user_type": "client",
+            "preferred_lang": "en",
+            "is_active": 1,
+            "created_at": "2026-04-05T01:05:06"
+        },
+        {
+            "user_id": 4,
+            "username": "aklsof5",
+            "email": "aklsof@gmail.com",
+            "user_firstName": "akli",
+            "user_lastName": "sof",
+            "user_address1": null,
+            "city": null,
+            "province": null,
+            "password_hash": "$2b$12$3AxrDK8iid98p0T7CWVjvupiHLR3NLAqOSWZlhPSH96oxgGXK8Jhi",
+            "pin_hash": null,
+            "role": "Administrator",
+            "user_type": "staff",
+            "preferred_lang": "en",
+            "is_active": 1,
+            "created_at": "2026-06-07T19:12:47"
         }
     ],
     "inventory_lots": [
@@ -67,16 +173,79 @@
         {
             "lot_id": 2,
             "product_id": 2,
-            "quantity": 1,
+            "quantity": 0,
             "buying_price": 90.0,
             "date_received": "2026-04-04T16:40:18"
         },
         {
             "lot_id": 3,
             "product_id": 3,
-            "quantity": 130,
+            "quantity": 121,
             "buying_price": 10.0,
             "date_received": "2026-04-04T16:40:36"
+        },
+        {
+            "lot_id": 4,
+            "product_id": 2,
+            "quantity": 19,
+            "buying_price": 120.0,
+            "date_received": "2026-04-04T21:48:24"
+        },
+        {
+            "lot_id": 5,
+            "product_id": 1,
+            "quantity": 15,
+            "buying_price": 13.0,
+            "date_received": "2026-04-04T22:01:45"
+        },
+        {
+            "lot_id": 6,
+            "product_id": 3,
+            "quantity": 20,
+            "buying_price": 10.0,
+            "date_received": "2026-04-05T17:59:16"
+        },
+        {
+            "lot_id": 7,
+            "product_id": 7,
+            "quantity": 90,
+            "buying_price": 9.0,
+            "date_received": "2026-04-11T03:16:36"
+        },
+        {
+            "lot_id": 8,
+            "product_id": 2,
+            "quantity": 25,
+            "buying_price": 15.0,
+            "date_received": "2026-04-11T03:17:10"
+        },
+        {
+            "lot_id": 9,
+            "product_id": 8,
+            "quantity": 25,
+            "buying_price": 16.0,
+            "date_received": "2026-04-11T03:17:38"
+        },
+        {
+            "lot_id": 10,
+            "product_id": 5,
+            "quantity": 120,
+            "buying_price": 4.0,
+            "date_received": "2026-04-11T03:18:07"
+        },
+        {
+            "lot_id": 11,
+            "product_id": 6,
+            "quantity": 60,
+            "buying_price": 7.0,
+            "date_received": "2026-04-11T03:18:29"
+        },
+        {
+            "lot_id": 12,
+            "product_id": 9,
+            "quantity": 80,
+            "buying_price": 8.0,
+            "date_received": "2026-04-26T16:59:28"
         }
     ]
 }

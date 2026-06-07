@@ -124,6 +124,7 @@ export default function RegistrationPage() {
                       <option value="en">{t('lang_en')}</option>
                       <option value="fr">{t('lang_fr')}</option>
                       <option value="ar">{t('lang_ar')}</option>
+                      <option value="es">{t('lang_es')}</option>
                     </select>
                   </div>
 

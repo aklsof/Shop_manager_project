@@ -1,6 +1,7 @@
 """
 main.py — AKLI POS App entry point.
-Launches login window, then opens sales window on successful auth.
+Flow: LoginWindow → DashboardWindow (service grid, low-stock alerts)
+      → individual windows launched from dashboard cards.
 """
 import sys
 import os
@@ -10,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import tkinter as tk
 from auth.login_window import LoginWindow
-from pos.sales_window import SalesWindow
+from pos.dashboard_window import DashboardWindow
 from sync_manager import sync_worker
 
 
@@ -29,9 +30,9 @@ def main():
         # Window was closed without logging in
         return
 
-    # Step 2: Open main sales window
+    # Step 2: Show dashboard (welcome page)
     root = tk.Tk()
-    SalesWindow(root, user)
+    DashboardWindow(root, user)
     root.mainloop()
 
 

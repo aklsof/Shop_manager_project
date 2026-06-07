@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useTheme } from '@/lib/theme';
+import { useLang } from '@/lib/i18n';
 
 interface POSProduct {
   product_id: number;
@@ -19,6 +20,7 @@ interface POSProduct {
 export default function POSTerminalPage() {
   const router = useRouter();
   const { fmt } = useTheme();
+  const { t } = useLang();
   const [products, setProducts] = useState<POSProduct[]>([]);
   const [cart, setCart] = useState<{ product_id: number; name: string; quantity: number; price: number; tax_rate: number }[]>([]);
   const [search, setSearch] = useState('');
@@ -41,10 +43,10 @@ export default function POSTerminalPage() {
   function addToCart(p: POSProduct) {
     const existing = cart.find(i => i.product_id === p.product_id);
     if (existing) {
-        if (existing.quantity >= p.total_stock) { alert('Insufficient stock!'); return; }
+        if (existing.quantity >= p.total_stock) { alert(t('pos_insufficient_stock')); return; }
         setCart(cart.map(i => i.product_id === p.product_id ? { ...i, quantity: i.quantity + 1 } : i));
     } else {
-        if (p.total_stock <= 0) { alert('Out of stock!'); return; }
+        if (p.total_stock <= 0) { alert(t('pos_out_of_stock')); return; }
         setCart([...cart, { product_id: p.product_id, name: p.product_name, quantity: 1, price: Number(p.effective_price), tax_rate: Number(p.tax_rate) }]);
     }
   }
@@ -63,8 +65,7 @@ export default function POSTerminalPage() {
     }
 
     if (newQty > product.total_stock) {
-      alert(`Only ${product.total_stock} units available in stock!`);
-      // Optionally reset to max stock or keep previous. Let's reset to max stock.
+      alert(t('pos_qty_available', { n: product.total_stock }));
       newQty = product.total_stock;
     }
 
@@ -86,7 +87,7 @@ export default function POSTerminalPage() {
     const data = await res.json();
     setProcessing(false);
     if (res.ok) {
-        alert('Sale completed successfully! Transaction ID: ' + data.transaction_id);
+        alert(t('pos_sale_ok') + data.transaction_id);
         setCart([]);
         fetchProducts();
     } else {
@@ -100,21 +101,21 @@ export default function POSTerminalPage() {
     <>
       <Navbar />
       <div className="admin-container">
-        <a href="/admin" className="btn-back">← Dashboard</a>
-        <h1 className="admin-title">💻 Web POS Terminal</h1>
+        <a href="/admin" className="btn-back">{t('pos_back_dashboard')}</a>
+        <h1 className="admin-title">{t('pos_page_title')}</h1>
 
         <div className="pos-layout">
           {/* Products Sidebar */}
           <div className="pos-products">
-            <input type="text" className="form-control pos-search" placeholder="Search product or category…" value={search} onChange={e => setSearch(e.target.value)} />
-            {loading ? <p>Loading catalog…</p> : (
+            <input type="text" className="form-control pos-search" placeholder={t('pos_search_ph')} value={search} onChange={e => setSearch(e.target.value)} />
+            {loading ? <p>{t('pos_loading')}</p> : (
               <div className="product-grid-sm">
                 {filtered.map(p => (
                   <div key={p.product_id} className={`product-tile ${p.total_stock <= 0 ? 'out-of-stock' : ''}`} onClick={() => addToCart(p)}>
                     <div className="tile-name">{p.product_name}</div>
                     <div className="tile-category">{p.category}</div>
                     <div className="tile-price"><strong>{fmt(Number(p.effective_price))}</strong></div>
-                    <div className="tile-stock">Qty: {p.total_stock}</div>
+                    <div className="tile-stock">{t('pos_qty_label')} {p.total_stock}</div>
                     {p.has_active_deal === 1 && <span className="deal-star">★</span>}
                   </div>
                 ))}
@@ -124,9 +125,9 @@ export default function POSTerminalPage() {
 
           {/* Cart Panel */}
           <div className="pos-cart">
-             <h2>🧾 Current Selection</h2>
+             <h2>{t('pos_current_sel')}</h2>
              <div className="cart-list">
-               {cart.length === 0 ? <p className="empty-cart-msg">No items selected</p> : cart.map(i => (
+               {cart.length === 0 ? <p className="empty-cart-msg">{t('pos_no_items')}</p> : cart.map(i => (
                  <div key={i.product_id} className="cart-row">
                     <div className="cart-row-details">
                       <strong>{i.name}</strong>
@@ -142,22 +143,22 @@ export default function POSTerminalPage() {
                       </div>
                     </div>
                     <div className="cart-row-actions">
-                       <button className="btn btn-danger btn-xs" title="Remove" onClick={() => removeFromCart(i.product_id)}>✕</button>
+                       <button className="btn btn-danger btn-xs" title={t('remove')} onClick={() => removeFromCart(i.product_id)}>✕</button>
                     </div>
                  </div>
                ))}
              </div>
 
              <div className="cart-summary">
-                <div className="summary-line"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
-                <div className="summary-line"><span>Tax</span><span>{fmt(totalTax)}</span></div>
-                <div className="summary-line total-line"><span>Total</span><span>{fmt(total)}</span></div>
+                <div className="summary-line"><span>{t('subtotal')}</span><span>{fmt(subtotal)}</span></div>
+                <div className="summary-line"><span>{t('pos_tax')}</span><span>{fmt(totalTax)}</span></div>
+                <div className="summary-line total-line"><span>{t('pos_total')}</span><span>{fmt(total)}</span></div>
              </div>
 
              <button className="btn btn-primary btn-full checkout-btn" disabled={cart.length === 0 || processing} onClick={handleCheckout}>
-               {processing ? 'Processing…' : 'Finalize Sale'}
+               {processing ? t('pos_processing') : t('pos_finalize')}
              </button>
-             <button className="btn btn-muted btn-full" style={{ marginTop: '0.5rem' }} onClick={() => setCart([])}>Clear Basket</button>
+             <button className="btn btn-muted btn-full" style={{ marginTop: '0.5rem' }} onClick={() => setCart([])}>{t('pos_clear')}</button>
           </div>
         </div>
       </div>

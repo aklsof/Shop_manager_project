@@ -9,9 +9,10 @@ import { useTheme } from '@/lib/theme';
 import { THEME_CATALOGUE, UserVisualPrefs } from '@/lib/settings';
 
 const LANG_NAMES: Record<LangCode, Record<LangCode, string>> = {
-  en: { en: 'English', fr: 'Anglais', ar: 'الإنجليزية' },
-  fr: { en: 'French', fr: 'Français', ar: 'الفرنسية' },
-  ar: { en: 'Arabic', fr: 'Arabe', ar: 'العربية' },
+  en: { en: 'English', fr: 'Anglais', ar: 'الإنجليزية', es: 'Inglés' },
+  fr: { en: 'French', fr: 'Français', ar: 'الفرنسية', es: 'Francés' },
+  ar: { en: 'Arabic', fr: 'Arabe', ar: 'العربية', es: 'Árabe' },
+  es: { en: 'Spanish', fr: 'Espagnol', ar: 'الإسبانية', es: 'Español' },
 };
 
 export default function ProfilePage() {
