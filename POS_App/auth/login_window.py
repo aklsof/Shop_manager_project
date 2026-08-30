@@ -115,7 +115,7 @@ class LoginWindow:
         hint_frame.pack(fill='x', pady=(12, 0))
         tk.Label(hint_frame, text=pos_locale.t("client_account_hint"), font=("Helvetica", 8),
                  bg=COLOR_WHITE, fg=COLOR_MUTED).pack()
-        link_lbl = tk.Label(hint_frame, text="https://aklishop.netlify.app/", font=("Helvetica", 8, "underline"),
+        link_lbl = tk.Label(hint_frame, text="https://localhost/", font=("Helvetica", 8, "underline"),
                            bg=COLOR_WHITE, fg=COLOR_RED, cursor="hand2")
         link_lbl.pack()
         link_lbl.bind("<Button-1>", lambda e: self._open_url("https://aklishop.netlify.app/"))
