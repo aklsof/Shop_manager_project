@@ -1,0 +1,34 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
+
+  <Bundle Name="AKLI Shop Manager" 
+          Version="1.6.0.0" 
+          Manufacturer="Sofiane Akli" 
+          UpgradeCode="C1D2E3F4-0000-0000-0000-000000000001">
+
+    <BootstrapperApplication>
+      <bal:WixStandardBootstrapperApplication 
+        LicenseFile="..\License.rtf"
+        Theme="rtfLicense" 
+        ShowVersion="yes" />
+    </BootstrapperApplication>
+
+    <Chain>
+      <!--
+        Prerequisites (Node.js, Python, MySQL) are no longer bundled.
+        Users install them manually before running this setup.
+        The install-launcher.ps1 script checks for prerequisites and
+        guides the user through installing any missing dependencies.
+        
+        Use "Install AKLI Shop.bat" to start the guided installation.
+      -->
+
+      <!-- AKLI Shop Manager MSI (embedded in the bundle) -->
+      <MsiPackage Id="AKLIShop"
+                  SourceFile="$(var.AKLIShop.TargetPath)"
+                  Compressed="yes"
+                  Vital="yes" />
+    </Chain>
+
+  </Bundle>
+</Wix>

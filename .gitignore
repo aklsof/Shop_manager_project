@@ -1,0 +1,97 @@
+# ============================================================
+#  AKLI Shop Manager — Root .gitignore
+# ============================================================
+
+# ==========================
+#  OS & Editor
+# ==========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+.cursor/
+
+# ==========================
+#  Environment / Credentials
+# ==========================
+# These contain database passwords and must not be committed.
+# The installer bundles default (localhost) copies; developers
+# should keep their own .env files locally only.
+POS_App/.env
+Web_App/.env.local
+Web_App/.env
+*.env.production
+
+# ==========================
+#  Python (POS_App)
+# ==========================
+POS_App/__pycache__/
+POS_App/**/__pycache__/
+POS_App/.pytest_cache/
+POS_App/build/
+POS_App/dist/
+POS_App/venv/
+POS_App/*.egg-info/
+POS_App/output.log
+POS_App/store_cache.json
+*.pyc
+*.pyo
+*.pyd
+
+# ==========================
+#  Node / Next.js (Web_App)
+# ==========================
+Web_App/node_modules/
+Web_App/.next/
+Web_App/out/
+Web_App/.cache/
+Web_App/.vercel/
+Web_App/*.tsbuildinfo
+Web_App/next-env.d.ts
+Web_App/AKLI_WebApp.exe
+
+# ==========================
+#  Installer Build Artifacts
+# ==========================
+# WiX build output (MSI, PDB, CAB files)
+installer/bin/
+installer/obj/
+
+# Bootstrapper build output (setup.exe + copies of prereqs)
+installer/bootstrapper/bin/
+installer/bootstrapper/obj/
+
+# Final installer output (timestamped EXEs)
+installer/output/
+
+# Prerequisite installers are handled by prereqs/.gitignore
+# (already ignores everything in that folder)
+
+# WiX intermediate files
+*.wixpdb
+*.wixobj
+
+# ==========================
+#  Installer log
+# ==========================
+installer/install.log
+
+# ==========================
+#  Misc Build Artifacts
+# ==========================
+*.msi
+*.cab
+*.exe
+# Exception: keep small utility scripts that are .bat
+!installer/scripts/*.bat
+
+# ==========================
+#  Temporary files
+# ==========================
+tmp/
+*.tmp
+*.log

@@ -1,0 +1,47 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <PropertyGroup>
+    <Platforms>x64</Platforms>
+    <Platform>x64</Platform>
+    <!-- Output MSI file name (produces AKLIShop_Setup.msi) -->
+    <OutputName>AKLIShop_Setup</OutputName>
+    <OutputType>Package</OutputType>
+
+    <!--
+      SourceDir points to the project root (one level up from installer/).
+      This is used throughout .wxs files to reference source files.
+    -->
+    <DefineConstants>SourceDir=..\</DefineConstants>
+  </PropertyGroup>
+
+  <!--
+    WiX Extension References:
+    - WixToolset.UI.wixext   : Provides built-in UI dialogs (WixUI_FeatureTree, etc.)
+    - WixToolset.Util.wixext : Provides WixQuietExec for running custom action scripts
+  -->
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+  <!--
+    Explicitly list MSI source files.
+    EnableDefaultCompileItems=false prevents WiX from auto-discovering .wxs files
+    in subdirectories (like bootstrapper/Bundle.wxs) while PackageReference still works.
+  -->
+  <PropertyGroup>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Package.wxs" />
+    <Compile Include="Directories.wxs" />
+    <Compile Include="Features.wxs" />
+    <Compile Include="CustomActions.wxs" />
+    <Compile Include="Components_Database.wxs" />
+    <Compile Include="Components_POS.wxs" />
+    <Compile Include="Components_Shortcuts.wxs" />
+    <Compile Include="Components_WebApp.wxs" />
+  </ItemGroup>
+
+</Project>

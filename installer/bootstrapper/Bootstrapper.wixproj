@@ -1,0 +1,16 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <Platforms>x64</Platforms>
+    <Platform>x64</Platform>
+    <OutputType>Bundle</OutputType>
+    <OutputName>AKLIShop_Setup</OutputName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Bal.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AKLIShop.wixproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Directories.wxs — Directory structure for AKLI Hybrid Store Manager.
+  
+  Defines the on-disk folder layout under Program Files and the
+  Start Menu / Desktop locations for shortcuts.
+  
+  Layout:
+    C:\Program Files\AKLIShop\          (INSTALLFOLDER)
+      ├── WebApp\                       (WEBAPPFOLDER)
+      ├── POSApp\                       (POSAPPFOLDER)
+      ├── Database\                     (DATABASEFOLDER)
+      └── scripts\                      (SCRIPTSFOLDER)
+    
+    Start Menu\Programs\AKLI Shop\      (AKLIShopMenuFolder)
+    Desktop\                            (DesktopFolder)
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+    <!-- ================================================================
+         Program Files Directory Tree
+         ================================================================ -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="AKLIShop">
+
+        <!-- Next.js web application files -->
+        <Directory Id="WEBAPPFOLDER" Name="WebApp" />
+
+        <!-- Python POS register application files -->
+        <Directory Id="POSAPPFOLDER" Name="POSApp" />
+
+        <!-- SQL schema and migration scripts -->
+        <Directory Id="DATABASEFOLDER" Name="Database" />
+
+        <!-- PowerShell setup scripts and batch launchers -->
+        <Directory Id="SCRIPTSFOLDER" Name="scripts" />
+
+      </Directory>
+    </StandardDirectory>
+
+    <!-- ================================================================
+         Start Menu Shortcut Directory
+         ================================================================ -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AKLIShopMenuFolder" Name="AKLI Shop" />
+    </StandardDirectory>
+
+    <!-- ================================================================
+         Desktop Shortcut Directory
+         ================================================================ -->
+    <StandardDirectory Id="DesktopFolder" />
+
+  </Fragment>
+
+</Wix>

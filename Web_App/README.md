@@ -1,6 +1,6 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## New V 1.0.5
+## New V 1.6.0
 
 The latest version has been released. this was the changes:
 

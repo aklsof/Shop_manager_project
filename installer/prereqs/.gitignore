@@ -1,0 +1,4 @@
+# Downloaded prerequisite installers (large binary files)
+# These are downloaded by build.ps1 and only needed at WiX build time.
+*
+!.gitignore

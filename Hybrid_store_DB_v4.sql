@@ -309,7 +309,7 @@ SELECT
   CAST(t.transaction_date AS date) AS sale_date,
   p.product_id,
   p.name                           AS product_name,
-  p.category,
+  c.name                           AS category,
   SUM(CASE WHEN t.is_refund = 0 THEN ti.quantity          ELSE 0 END) AS units_sold,
   SUM(CASE WHEN t.is_refund = 1 THEN ABS(ti.quantity)     ELSE 0 END) AS units_refunded,
   SUM(CASE WHEN t.is_refund = 0
@@ -328,8 +328,9 @@ SELECT
 FROM `transaction_items` ti
 JOIN `transactions`    t  ON t.transaction_id = ti.transaction_id
 JOIN `products`        p  ON p.product_id     = ti.product_id
+JOIN `product_categories` c ON c.category_id  = p.category_id
 JOIN `inventory_lots`  il ON il.lot_id        = ti.lot_id
-GROUP BY CAST(t.transaction_date AS date), p.product_id, p.name, p.category_id;
+GROUP BY CAST(t.transaction_date AS date), p.product_id, p.name, c.name;
 
 -- --------------------------------------------------------
 -- vw_inventory_adjustment_log

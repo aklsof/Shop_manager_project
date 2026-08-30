@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Components_WebApp.wxs — Component definitions for the Next.js Web Application.
+  
+  Contains one ComponentGroup:
+    1. WebAppComponents — The standalone Next.js server and launcher executable
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+
+    <ComponentGroup Id="WebAppComponents" Directory="WEBAPPFOLDER">
+
+      <!-- AKLI_WebApp.exe — Launcher executable that runs node server.js -->
+      <Component Id="WebApp_LauncherExecutable" Guid="{B1A2C3D4-3333-4000-A001-000000000001}">
+        <File Id="WebApp_LauncherExecutable_File"
+              Source="$(var.SourceDir)Web_App\AKLI_WebApp.exe"
+              KeyPath="yes" />
+      </Component>
+
+      <!-- Include .env.local file for database configuration -->
+      <Component Id="WebApp_EnvLocal" Guid="{B1A2C3D4-3333-4000-A001-000000000002}">
+        <File Id="WebApp_EnvLocal_File"
+              Source="$(var.SourceDir)Web_App\.env.local"
+              KeyPath="yes" />
+      </Component>
+
+      <!-- Harvest all files in the .next\standalone directory -->
+      <!-- In WiX v5, the Files element automatically harvests the folder contents -->
+      <Files Include="$(var.SourceDir)Web_App\.next\standalone\**" />
+
+    </ComponentGroup>
+
+  </Fragment>
+
+</Wix>

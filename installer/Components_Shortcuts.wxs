@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Components_Shortcuts.wxs — Start Menu and Desktop shortcuts.
+  
+  Contains two ComponentGroups:
+    1. WebAppShortcuts — Start Menu + Desktop shortcuts for the Web Application
+    2. POSShortcuts    — Start Menu + Desktop shortcuts for the POS Register
+  
+  WiX requires shortcuts to use a registry key as KeyPath (not a file).
+  Each component writes a small registry entry under HKCU\Software\AKLIShop
+  that serves as the component's KeyPath for proper reference counting.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+
+    <!-- Start Menu shortcut for Web Application -->
+    <Component Id="WebApp_MenuShortcut"
+               Directory="AKLIShopMenuFolder"
+               Guid="{E1A2C3D4-7777-4000-A001-000000000001}">
+      <RegistryValue Root="HKCU" Key="Software\AKLIShop\WebApp" Name="MenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      <Shortcut Id="WebApp_StartMenuShortcut"
+                Name="AKLI Web App"
+                Description="Launch the AKLI Hybrid Store web application"
+                Target="[WEBAPPFOLDER]AKLI_WebApp.exe"
+                WorkingDirectory="WEBAPPFOLDER"
+                Icon="WebAppIcon.ico" />
+      <RemoveFolder Id="RemoveWebAppMenuFolder" Directory="AKLIShopMenuFolder" On="uninstall" />
+    </Component>
+
+    <!-- Desktop shortcut for Web Application -->
+    <Component Id="WebApp_DesktopShortcut"
+               Directory="DesktopFolder"
+               Guid="{E1A2C3D4-7777-4000-A002-000000000002}">
+      <RegistryValue Root="HKCU" Key="Software\AKLIShop\WebApp" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      <Shortcut Id="WebApp_DesktopShortcutLink"
+                Name="AKLI Web App"
+                Description="Launch the AKLI Hybrid Store web application"
+                Target="[WEBAPPFOLDER]AKLI_WebApp.exe"
+                WorkingDirectory="WEBAPPFOLDER"
+                Icon="WebAppIcon.ico" />
+    </Component>
+
+    <!-- Start Menu shortcut for POS Register -->
+    <Component Id="POS_MenuShortcut"
+               Directory="AKLIShopMenuFolder"
+               Guid="{E1A2C3D4-8888-4000-A001-000000000001}">
+      <RegistryValue Root="HKCU" Key="Software\AKLIShop\POS" Name="MenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      <Shortcut Id="POS_StartMenuShortcut"
+                Name="AKLI POS Register"
+                Description="Launch the AKLI point-of-sale register application"
+                Target="[POSAPPFOLDER]AKLIShop.exe"
+                WorkingDirectory="POSAPPFOLDER"
+                Icon="POSAppIcon.ico" />
+      <RemoveFolder Id="RemovePOSMenuFolder" Directory="AKLIShopMenuFolder" On="uninstall" />
+    </Component>
+
+    <!-- Desktop shortcut for POS Register -->
+    <Component Id="POS_DesktopShortcut"
+               Directory="DesktopFolder"
+               Guid="{E1A2C3D4-8888-4000-A002-000000000002}">
+      <RegistryValue Root="HKCU" Key="Software\AKLIShop\POS" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      <Shortcut Id="POS_DesktopShortcutLink"
+                Name="AKLI POS Register"
+                Description="Launch the AKLI point-of-sale register application"
+                Target="[POSAPPFOLDER]AKLIShop.exe"
+                WorkingDirectory="POSAPPFOLDER"
+                Icon="POSAppIcon.ico" />
+    </Component>
+
+    <!-- Uninstall script placed in the root install folder -->
+    <Component Id="Uninstall_Script"
+               Directory="INSTALLFOLDER"
+               Guid="{E1A2C3D4-9999-4000-A001-000000000001}">
+      <File Id="Uninstall_Bat"
+            Source="$(var.SourceDir)installer\scripts\uninstall.bat"
+            KeyPath="yes" />
+    </Component>
+
+    <!-- Start Menu shortcut for Uninstall -->
+    <Component Id="Uninstall_MenuShortcut"
+               Directory="AKLIShopMenuFolder"
+               Guid="{E1A2C3D4-9999-4000-A002-000000000002}">
+      <RegistryValue Root="HKCU" Key="Software\AKLIShop\Uninstall" Name="MenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      <Shortcut Id="Uninstall_StartMenuShortcut"
+                Name="Uninstall AKLI Shop"
+                Description="Uninstall AKLI Shop Manager from this computer"
+                Target="[INSTALLFOLDER]uninstall.bat"
+                WorkingDirectory="INSTALLFOLDER" />
+    </Component>
+
+    <!-- ================================================================
+         Icon Definitions
+         ================================================================
+         Icon files referenced by shortcuts. Replace these paths with
+         actual .ico files in your project.
+         
+         TODO: Create or add icon files:
+           - installer\icons\webapp.ico
+           - installer\icons\posapp.ico
+    -->
+    <Icon Id="WebAppIcon.ico" SourceFile="$(var.SourceDir)installer\icons\webapp.ico" />
+    <Icon Id="POSAppIcon.ico" SourceFile="$(var.SourceDir)installer\icons\posapp.ico" />
+
+  </Fragment>
+
+</Wix>

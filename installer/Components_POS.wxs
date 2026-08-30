@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Components_POS.wxs — Component definitions for the Python POS Register Application.
+  
+  Contains one ComponentGroup:
+    1. POSAppComponents — The compiled POS application executable
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+    <ComponentGroup Id="POSAppComponents" Directory="POSAPPFOLDER">
+
+      <!-- AKLIShop.exe — Standalone executable compiled by PyInstaller -->
+      <Component Id="POS_Executable" Guid="{C1A2C3D4-3333-4000-A001-000000000001}">
+        <File Id="POS_Executable_File"
+              Source="$(var.SourceDir)POS_App\dist\AKLIShop.exe"
+              KeyPath="yes" />
+      </Component>
+
+      <!-- Include .env file for database configuration -->
+      <Component Id="POS_EnvFile" Guid="{C1A2C3D4-3333-4000-A001-000000000002}">
+        <File Id="POS_Env_File"
+              Source="$(var.SourceDir)POS_App\.env"
+              KeyPath="yes" />
+      </Component>
+
+    </ComponentGroup>
+  </Fragment>
+
+</Wix>

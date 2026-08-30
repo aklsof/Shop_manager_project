@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Features.wxs — Feature tree for AKLI Hybrid Store Manager.
+  
+  The WixUI_FeatureTree dialog lets users select/deselect these features:
+  
+  1. Web Application (Next.js)  — The customer/admin shopping website
+  2. POS Register (Python)      — The desktop point-of-sale application
+  3. Database Setup (MySQL)     — Schema initialization and migrations
+  
+  All features are Level=1 (selected by default). Users can deselect
+  components they don't need during installation.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+
+    <!-- ================================================================
+         Feature: Web Application (Next.js / TypeScript)
+         ================================================================
+         Installs the Next.js web application source files, the PowerShell
+         setup script (npm install, etc.), and the batch launcher.
+    -->
+    <Feature Id="WebAppFeature"
+             Title="Web Application (Next.js)"
+             Description="The AKLI shopping website for customers and administrators. Requires Node.js."
+             Level="1"
+             AllowAdvertise="no"
+             Display="expand"
+             ConfigurableDirectory="WEBAPPFOLDER">
+
+      <ComponentGroupRef Id="WebAppComponents" />
+
+      <Feature Id="WebAppDesktopShortcutFeature" Title="Desktop Shortcut" Level="1" Description="Create a shortcut on the Desktop">
+        <ComponentRef Id="WebApp_DesktopShortcut" />
+      </Feature>
+
+      <Feature Id="WebAppStartMenuShortcutFeature" Title="Start Menu Shortcut" Level="1" Description="Create a shortcut in the Start Menu">
+        <ComponentRef Id="WebApp_MenuShortcut" />
+      </Feature>
+
+      <!-- Uninstall shortcut (always included with Web App) -->
+      <ComponentRef Id="Uninstall_Script" />
+      <ComponentRef Id="Uninstall_MenuShortcut" />
+
+    </Feature>
+
+    <!-- ================================================================
+         Feature: POS Register (Python / Tkinter)
+         ================================================================
+         Installs the Python POS application executable.
+    -->
+    <Feature Id="POSAppFeature"
+             Title="POS Register (Python)"
+             Description="The AKLI point-of-sale desktop register application. Requires Python."
+             Level="1"
+             AllowAdvertise="no"
+             Display="expand"
+             ConfigurableDirectory="POSAPPFOLDER">
+
+      <ComponentGroupRef Id="POSAppComponents" />
+
+      <Feature Id="POSDesktopShortcutFeature" Title="Desktop Shortcut" Level="1" Description="Create a shortcut on the Desktop">
+        <ComponentRef Id="POS_DesktopShortcut" />
+      </Feature>
+
+      <Feature Id="POSStartMenuShortcutFeature" Title="Start Menu Shortcut" Level="1" Description="Create a shortcut in the Start Menu">
+        <ComponentRef Id="POS_MenuShortcut" />
+      </Feature>
+
+    </Feature>
+
+    <!-- ================================================================
+         Feature: Database Setup (MySQL)
+         ================================================================
+         Installs the SQL schema file, migration scripts, and the
+         PowerShell database initialization script.
+    -->
+    <Feature Id="DatabaseFeature"
+             Title="Database Setup (MySQL)"
+             Description="Initialize the hybrid_store MySQL database with schema and seed data. Requires MySQL Server."
+             Level="1"
+             AllowAdvertise="no"
+             Display="expand"
+             ConfigurableDirectory="DATABASEFOLDER">
+
+      <ComponentGroupRef Id="DatabaseComponents" />
+      <ComponentGroupRef Id="DatabaseScripts" />
+
+    </Feature>
+
+  </Fragment>
+
+</Wix>

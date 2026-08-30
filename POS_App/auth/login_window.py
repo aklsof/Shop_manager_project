@@ -181,7 +181,13 @@ class LoginWindow:
             self.root.destroy()
 
         except Exception as e:
-            self._show_error(f"{pos_locale.t('db_error')}: {e}")
+            err_msg = str(e)
+            self._show_error(f"{pos_locale.t('db_error')}: {err_msg}")
+            
+            # Automatically open settings if it looks like a connection/auth/missing DB issue
+            if any(err in err_msg for err in ["Access denied", "Unknown database", "WinError 10061", "Can't connect"]):
+                messagebox.showerror("Database Error", "Could not connect to the database.\n\nPlease verify your server credentials or initialize the database.")
+                self._open_settings()
 
     def _switch_lang(self, lang_code):
         uname = self.username_var.get()
@@ -200,7 +206,7 @@ class LoginWindow:
     def _open_settings(self):
         win = tk.Toplevel(self.root)
         win.title("Server Credentials")
-        win.geometry("300x350")
+        win.geometry("300x420")
         win.resizable(False, False)
         win.configure(bg=COLOR_BG)
 
@@ -244,9 +250,29 @@ class LoginWindow:
             env_data['DB_USER'] = user_ent.get()
             env_data['DB_PASSWORD'] = pwd_ent.get()
             env_data['DB_PORT'] = port_ent.get()
+            
+            # 1. Update POS App .env
             with open(env_path, 'w') as f:
                 for k, v in env_data.items():
                     f.write(f"{k}={v}\n")
+                    
+            # 2. Sync to Web App .env.local if available
+            try:
+                if getattr(sys, 'frozen', False):
+                    # Installed mode: C:\Program Files\AKLIShop\POSApp -> C:\Program Files\AKLIShop\WebApp
+                    webapp_env = os.path.join(os.path.dirname(BASE_DIR), 'WebApp', '.env.local')
+                else:
+                    # Dev mode
+                    webapp_env = os.path.join(os.path.dirname(BASE_DIR), 'Web_App', '.env.local')
+                
+                if os.path.exists(os.path.dirname(webapp_env)):
+                    with open(webapp_env, 'w') as f:
+                        for k, v in env_data.items():
+                            f.write(f"{k}={v}\n")
+                        # Preserve session secret if it existed, otherwise add a default
+                        f.write(f"SESSION_SECRET=change_this_to_a_long_random_secret\n")
+            except Exception as e:
+                print(f"Failed to sync WebApp .env.local: {e}")
             
             from config import DB_CONFIG
             DB_CONFIG['host'] = env_data['DB_HOST']
@@ -255,10 +281,33 @@ class LoginWindow:
             DB_CONFIG['password'] = env_data['DB_PASSWORD']
             DB_CONFIG['port'] = int(env_data['DB_PORT'] or '3306')
             
-            messagebox.showinfo("Success", "Server credentials updated.")
+            messagebox.showinfo("Success", "Server credentials saved.\nIf you haven't initialized the database yet, click 'Initialize Database'.")
             win.destroy()
 
-        tk.Button(win, text="Save Changes", bg=COLOR_RED, fg=COLOR_WHITE, font=("Helvetica", 10, "bold"), command=save).pack(pady=16)
+        def init_db():
+            # Save credentials first
+            env_data['DB_HOST'] = host_ent.get()
+            env_data['DB_NAME'] = db_ent.get()
+            env_data['DB_USER'] = user_ent.get()
+            env_data['DB_PASSWORD'] = pwd_ent.get()
+            env_data['DB_PORT'] = port_ent.get()
+            
+            from db import initialize_database
+            try:
+                success = initialize_database(
+                    host=env_data['DB_HOST'],
+                    port=env_data['DB_PORT'],
+                    user=env_data['DB_USER'],
+                    password=env_data['DB_PASSWORD']
+                )
+                if success:
+                    save()  # Save them officially
+                    messagebox.showinfo("Setup Complete", "Database successfully initialized and migrated!")
+            except Exception as e:
+                messagebox.showerror("Setup Failed", f"Failed to initialize database:\n{e}")
+
+        tk.Button(win, text="Save Credentials", bg=COLOR_BG, fg=COLOR_TEXT, font=("Helvetica", 10, "bold"), command=save).pack(pady=(16, 8))
+        tk.Button(win, text="Initialize Database", bg=COLOR_RED, fg=COLOR_WHITE, font=("Helvetica", 10, "bold"), command=init_db).pack(pady=0)
 
     def _trigger_update(self):
         import webbrowser

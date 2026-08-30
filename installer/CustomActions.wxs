@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CustomActions.wxs — Custom actions for AKLI Hybrid Store Manager installer.
+  
+  Defines five custom actions that run PowerShell scripts at various
+  points during install/uninstall:
+  
+  1. CheckPrereqs    — Immediate; validates Node.js, Python, MySQL are available
+  2. SetupDatabase   — Deferred; initializes MySQL schema and runs migrations
+  3. SetupWebApp     — Deferred; runs npm install and builds the Next.js app
+  4. SetupPOS        — Deferred; creates Python venv and installs dependencies
+  5. UninstallCleanup — Deferred; cleans up generated files on uninstall
+  
+  All actions use the WixQuietExec pattern from WixToolset.Util.wixext:
+    - A SetProperty action prepares the command line
+    - A CustomAction with DllEntry="WixQuietExec" executes it silently
+  
+  PowerShell invocation pattern:
+    powershell.exe -NoLogo -NonInteractive -NoProfile -ExecutionPolicy Bypass -File "<script>"
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Fragment>
+
+    <!-- ================================================================
+         1. CheckPrereqs — Prerequisite Validation (Immediate)
+         ================================================================
+         Runs BEFORE InstallFiles to verify that required software is
+         present on the system. If check-prereqs.ps1 returns a non-zero
+         exit code, the installation is aborted.
+         
+         This runs as immediate (not deferred) so it can block the install
+         early and display an error to the user.
+    -->
+
+    <!-- CheckPrereqs action removed: Prerequisites now handled by Bootstrapper -->
+
+    <!-- ================================================================
+         2. SetupDatabase — Database Initialization (Deferred)
+         ================================================================
+         Runs AFTER InstallFiles to execute the SQL schema and migrations
+         against the MySQL server. Only runs when the DatabaseFeature is
+         being installed (&DatabaseFeature=3 means "install locally").
+         
+         Deferred + Impersonate="no" runs as SYSTEM for elevated privileges.
+    -->
+
+    <!-- Pass install folder and script paths via CustomActionData -->
+    <!-- SetupDatabase custom action removed in v1.6.0.
+         Database initialization is now handled dynamically by the POS App GUI
+         so that users can enter their custom MySQL root password. -->
+    <!--
+    <SetProperty Id="SetupDatabase"
+                 Value="&quot;powershell.exe&quot; -NoLogo -NonInteractive -NoProfile -ExecutionPolicy Bypass -File &quot;[SCRIPTSFOLDER]setup-database.ps1&quot; -InstallDir &quot;[INSTALLFOLDER]&quot; -DatabaseDir &quot;[DATABASEFOLDER]&quot;"
+                 Before="SetupDatabase"
+                 Sequence="execute" />
+
+    <CustomAction Id="SetupDatabase"
+                  DllEntry="WixQuietExec"
+                  BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+    -->
+
+    <!-- SetupWebApp removed because the Next.js app is now pre-compiled during the build phase -->
+
+    <!-- ================================================================
+         4. UninstallCleanup — Uninstall Cleanup (Deferred)
+         ================================================================
+         Runs during uninstall (REMOVE="ALL") to clean up generated files
+         that were not part of the original MSI payload:
+           - node_modules/
+           - .next/ build output
+           - __pycache__/
+           - Python venv/
+           - Generated .env files
+    -->
+
+    <SetProperty Id="UninstallCleanup"
+                 Value="&quot;powershell.exe&quot; -NoLogo -NonInteractive -NoProfile -ExecutionPolicy Bypass -File &quot;[SCRIPTSFOLDER]uninstall-cleanup.ps1&quot; -InstallDir &quot;[INSTALLFOLDER]&quot;"
+                 Before="UninstallCleanup"
+                 Sequence="execute" />
+
+    <CustomAction Id="UninstallCleanup"
+                  DllEntry="WixQuietExec"
+                  BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- ================================================================
+         InstallExecuteSequence — Custom Action Scheduling
+         ================================================================
+         Defines the order and conditions under which each custom action
+         runs within the MSI install/uninstall sequence.
+         
+         Execution order (install):
+           1. CheckPrereqs     — Before InstallFiles (validates environment)
+           2. InstallFiles     — (built-in MSI action)
+           3. SetupDatabase    — After InstallFiles
+           4. SetupWebApp      — After SetupDatabase
+         
+         Execution order (uninstall):
+           1. UninstallCleanup — Before RemoveFiles
+           2. RemoveFiles      — (built-in MSI action)
+    -->
+    <InstallExecuteSequence>
+
+      <!--
+        CheckPrereqs: Removed because prerequisites are handled by WiX Bootstrapper (setup.exe).
+      -->
+
+      <!--
+        SetupDatabase: Run after InstallFiles when DatabaseFeature is selected.
+        Removed in v1.6.0 in favor of POS App GUI initialization.
+      -->
+      <!-- <Custom Action="SetupDatabase" After="InstallFiles" Condition="NOT Installed AND &amp;DatabaseFeature=3" /> -->
+
+      <!-- SetupWebApp and SetupPOS have been removed as they are now compiled during build -->
+
+      <!--
+        UninstallCleanup: Run before RemoveFiles during full uninstall.
+        REMOVE="ALL" ensures this only runs when all features are being removed.
+        Return="ignore" on the CustomAction ensures uninstall completes even
+        if cleanup encounters errors.
+      -->
+      <Custom Action="UninstallCleanup" Before="RemoveFiles" Condition="REMOVE=&quot;ALL&quot;" />
+
+    </InstallExecuteSequence>
+
+  </Fragment>
+
+</Wix>

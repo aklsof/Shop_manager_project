@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Components_Database.wxs — Component definitions for the MySQL Database Setup.
+  
+  Contains two ComponentGroups:
+    1. DatabaseComponents — SQL schema and migration files installed to DATABASEFOLDER
+    2. DatabaseScripts    — Setup, prereq-check, and cleanup scripts in SCRIPTSFOLDER
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Fragment>
+
+    <!-- ================================================================
+         ComponentGroup: DatabaseComponents
+         ================================================================
+         SQL files for initializing and migrating the hybrid_store database.
+    -->
+    <ComponentGroup Id="DatabaseComponents" Directory="DATABASEFOLDER">
+
+      <!--
+        Hybrid_store_DB_v4.sql — Main database schema.
+        Creates all tables, indexes, stored procedures, and seed data
+        for the hybrid_store MySQL database.
+      -->
+      <Component Id="DB_SchemaSQL" Guid="{D1A2C3D4-5555-4000-A001-000000000001}">
+        <File Id="DB_SchemaSQL_File"
+              Source="$(var.SourceDir)Hybrid_store_DB_v4.sql"
+              KeyPath="yes" />
+      </Component>
+
+      <!--
+        add_product_categories.sql — Migration: adds product category support.
+        Run after the main schema to extend the database with category tables
+        and relationships.
+      -->
+      <Component Id="DB_MigrationCategories" Guid="{D1A2C3D4-5555-4000-A002-000000000002}">
+        <File Id="DB_MigrationCategories_File"
+              Source="$(var.SourceDir)migrations\add_product_categories.sql"
+              KeyPath="yes" />
+      </Component>
+
+      <!--
+        fix_category_integrity.sql — Migration: fixes category referential integrity.
+        Adds foreign key constraints and cleans up orphaned category references.
+      -->
+      <Component Id="DB_MigrationIntegrity" Guid="{D1A2C3D4-5555-4000-A003-000000000003}">
+        <File Id="DB_MigrationIntegrity_File"
+              Source="$(var.SourceDir)migrations\fix_category_integrity.sql"
+              KeyPath="yes" />
+      </Component>
+
+    </ComponentGroup>
+
+    <!-- ================================================================
+         ComponentGroup: DatabaseScripts
+         ================================================================
+         PowerShell scripts for database setup, prerequisite checking,
+         and uninstall cleanup. Installed to the shared scripts/ directory.
+    -->
+    <ComponentGroup Id="DatabaseScripts" Directory="SCRIPTSFOLDER">
+
+      <!--
+        setup-database.ps1 — Post-install script that:
+          - Connects to MySQL server using provided credentials
+          - Executes Hybrid_store_DB_v4.sql to create the schema
+          - Runs migration scripts in order
+          - Reports success/failure
+      -->
+      <Component Id="DB_SetupScript" Guid="{D1A2C3D4-6666-4000-A001-000000000001}">
+        <File Id="DB_SetupScript_File"
+              Source="$(var.SourceDir)installer\scripts\setup-database.ps1"
+              KeyPath="yes" />
+      </Component>
+
+      <!-- check-prereqs.ps1 removed. Prereq checks are now handled by Bootstrapper -->
+
+      <!--
+        uninstall-cleanup.ps1 — Uninstall cleanup script:
+          - Stops running Node.js/Python processes for this app
+          - Removes generated files (node_modules, __pycache__, .next, venv)
+          - Optionally drops the database (with user confirmation prompt)
+      -->
+      <Component Id="DB_UninstallCleanup" Guid="{D1A2C3D4-6666-4000-A003-000000000003}">
+        <File Id="DB_UninstallCleanup_File"
+              Source="$(var.SourceDir)installer\scripts\uninstall-cleanup.ps1"
+              KeyPath="yes" />
+      </Component>
+
+    </ComponentGroup>
+
+  </Fragment>
+
+</Wix>

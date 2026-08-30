@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Package.wxs — Main product definition for AKLI Hybrid Store Manager.
+  
+  This is the primary WiX source file that defines the MSI package metadata,
+  upgrade behavior, and references all component/feature/directory fragments.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="AKLI Hybrid Store Manager"
+           Version="1.6.0.0"
+           Manufacturer="Sofiane Akli"
+           UpgradeCode="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+           Language="1033"
+           Codepage="1252"
+           InstallerVersion="500"
+           Compressed="yes"
+           Scope="perMachine">
+
+    <!--
+      MajorUpgrade: Ensures clean upgrades from any older version.
+      - Downgrades are blocked with a user-friendly message.
+      - Schedule="afterInstallInitialize" prevents REMOVE=ALL from being set
+        before InstallInitialize on fresh installs (WiX v5 default of
+        "afterInstallInitialize" causes REMOVE=ALL to trigger error 1603).
+    -->
+    <MajorUpgrade Schedule="afterInstallInitialize"
+                  DowngradeErrorMessage="A newer version of [ProductName] is already installed. Setup will now exit." />
+
+    <!--
+      Detect pending system reboot (MsiSystemRebootPending).
+      The Burn engine passes REINSTALLMODE="muso" for all MSI packages, which
+      combined with a pending reboot can cause InstallInitialize to abort.
+      This property is available from AppSearch onward.
+    -->
+    <Property Id="PENDINGREBOOT">
+      <RegistrySearch Id="DetectPendingReboot"
+                      Root="HKLM"
+                      Key="SYSTEM\CurrentControlSet\Control\Session Manager"
+                      Name="PendingFileRenameOperations"
+                      Type="raw" />
+    </Property>
+
+    <!--
+      Clear REMOVE property on fresh installs.
+      WiX v5 Burn always passes REINSTALLMODE="muso" to MSI packages, which
+      can cause the MajorUpgrade logic to set REMOVE=ALL even on first install.
+      InstallInitialize then aborts (return value 3 / error 1603) because it
+      tries to initialize an uninstall of a product that does not exist.
+      This SetProperty runs before InstallInitialize and clears REMOVE when
+      the product is NOT yet installed.
+    -->
+    <SetProperty Id="REMOVE" Value="" Before="InstallInitialize" Sequence="execute"
+                 Condition="NOT Installed" />
+
+    <!--
+      MediaTemplate: Embed all files into a single .cab inside the MSI.
+      This produces a single-file installer for easy distribution.
+    -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- ================================================================
+         UI Configuration
+         ================================================================
+         WixUI_FeatureTree provides a standard wizard with feature selection,
+         allowing users to choose which components to install (WebApp, POS, DB).
+    -->
+    <ui:WixUI Id="WixUI_FeatureTree" />
+
+    <!--
+      WIXUI_INSTALLDIR tells the UI dialogs which directory property
+      represents the main installation folder for the "Browse" button.
+    -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+    <!--
+      License: Custom End-User License Agreement
+    -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.SourceDir)installer\License.rtf" />
+
+    <!-- ================================================================
+         Features
+         ================================================================
+         Reference the features defined in Features.wxs to include them
+         in the final MSI package. Without these, the MSI will be empty.
+    -->
+    <FeatureRef Id="WebAppFeature" />
+    <FeatureRef Id="POSAppFeature" />
+    <FeatureRef Id="DatabaseFeature" />
+
+  </Package>
+
+</Wix>
